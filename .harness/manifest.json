@@ -1,0 +1,117 @@
+{
+  "harness": "ai-harness-framework",
+  "version": "0.5.0",
+  "schemaVersions": {
+    "featureList": 2,
+    "archRules": 1,
+    "trace": 1,
+    "manifest": 3
+  },
+  "featureIdPattern": "^feat-\\d{3}$",
+  "core": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "codex.md",
+    "GEMINI.md",
+    "Makefile",
+    "package.json",
+    "init.sh",
+    "scripts/",
+    "tests/",
+    "skills/",
+    "templates/",
+    ".harness/manifest.json",
+    ".harness/arch-rules.json"
+  ],
+  "templates": [
+    { "from": "templates/LICENSE", "to": "LICENSE" },
+    { "from": "templates/nvmrc", "to": ".nvmrc" },
+    { "from": "templates/README.md", "to": "README.md" },
+    { "from": "templates/gitattributes", "to": ".gitattributes" },
+    { "from": "templates/gitignore", "to": ".gitignore" },
+    { "from": "templates/progress.md", "to": "PROGRESS.md" },
+    { "from": "templates/DECISIONS.md", "to": "DECISIONS.md" },
+    { "from": "templates/feature-list.json", "to": "feature_list.json" },
+    { "from": "templates/session-handoff.md", "to": "session-handoff.md" },
+    { "from": "templates/quality-document.md", "to": "docs/quality-document.md" },
+    { "from": "templates/docs/PRODUCT.md", "to": "docs/PRODUCT.md" },
+    { "from": "templates/docs/ARCHITECTURE.md", "to": "docs/ARCHITECTURE.md" },
+    { "from": "templates/docs/OBSERVABILITY.md", "to": "docs/OBSERVABILITY.md" },
+    { "from": "templates/docs/TOOLS.md", "to": "docs/TOOLS.md" },
+    { "from": "templates/docs/USAGE.md", "to": "docs/USAGE.md" },
+    { "from": "templates/docs/STANDARDS.md", "to": "docs/STANDARDS.md" },
+    { "from": "templates/docs/decisions/index.md", "to": "docs/decisions/index.md" },
+    { "from": "templates/multi-repo/verify-all", "to": "scripts/verify-all" },
+    { "from": "templates/multi-repo/verify-all.mjs", "to": "scripts/verify-all.mjs" },
+    { "from": "templates/multi-repo/contracts/README.md", "to": "contracts/README.md" },
+    { "from": "templates/multi-repo/tasks/README.md", "to": "tasks/README.md" },
+    { "from": "templates/multi-repo/repositories/README.md", "to": "repositories/README.md" },
+    { "from": "templates/multi-repo/repositories/example/scripts/verify", "to": "repositories/example/scripts/verify" },
+    { "from": "templates/multi-repo/repositories/example/scripts/verify.mjs", "to": "repositories/example/scripts/verify.mjs" },
+    { "from": "templates/ci.yml", "to": ".github/workflows/ci.yml" },
+    { "from": "templates/sprint-contract.md", "keep": true },
+    { "from": "templates/evaluator-rubric.md", "keep": true },
+    { "from": "templates/clean-state-checklist.md", "keep": true }
+  ],
+  "instance": [
+    "feature_list.json",
+    ".harness/state/",
+    "PROGRESS.md",
+    "progress/",
+    "claude-progress.md",
+    "DECISIONS.md",
+    "session-handoff.md",
+    "LICENSE",
+    "README.md",
+    ".gitattributes",
+    ".gitignore",
+    ".nvmrc",
+    "package-lock.json",
+    ".claude/settings.json",
+    "docs/PRODUCT.md",
+    "docs/ARCHITECTURE.md",
+    "docs/OBSERVABILITY.md",
+    "docs/TOOLS.md",
+    "docs/USAGE.md",
+    "docs/HARNESS.md",
+    "docs/STANDARDS.md",
+    "docs/quality-document.md",
+    "docs/decisions/",
+    ".github/workflows/ci.yml",
+    ".harness/trails/",
+    ".harness/traces/.gitkeep"
+  ],
+  "productRoots": [
+    "backend/",
+    "evals/",
+    ".github/workflows/publish.yml",
+    "repo-completion-plan.md"
+  ],
+  "optionalComponents": [
+    {
+      "name": "multi-repo",
+      "description": "Root control plane + subrepo execution domains: contracts/, tasks/, repositories/*/scripts/verify, scripts/verify-all. create-harness never places these by default; adopters activate it with `node scripts/create-harness.mjs <dir> --with multi-repo` (safe to rerun later against an existing adopter). verify-all is an optional check layer that SKIPs both when the component is absent and when it is active but has nothing to verify yet.",
+      "markers": ["contracts/", "tasks/", "repositories/", "scripts/verify-all", "scripts/verify-all.mjs"]
+    }
+  ],
+  "customizationPoints": {
+    "mustEdit": [
+      "feature_list.json (feature content)",
+      "docs/ (project-specific guidance)",
+      ".harness/arch-rules.json (project rules)"
+    ],
+    "mayEdit": [
+      "Makefile (extra targets only)",
+      "package.json (project scripts)",
+      "init.sh (stack-specific verification)",
+      ".harness/manifest.json (productRoots only)",
+      "skills/ (add project skills only — never modify the shipped skills)"
+    ],
+    "mustNotEdit": [
+      "scripts/framework-check.mjs",
+      "the manifest classification (core, instance, templates, optionalComponents)",
+      "the PASS/SKIP/FAIL semantics of verification layers",
+      "the feature state machine and WIP=1 contract"
+    ]
+  }
+}

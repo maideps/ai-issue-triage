@@ -1,0 +1,58 @@
+{
+  "rules": [
+    {
+      "id": "arch-001",
+      "description": "Framework surfaces exist at the repository root",
+      "check": "node scripts/framework-check.mjs arch:required-surfaces",
+      "expect": "PASS",
+      "what": "A required harness surface is missing from the repository root.",
+      "why": "The framework only works as a reusable bootstrap when its root instructions, state files, scripts, and docs are discoverable in consistent locations.",
+      "fix": "Restore the missing root file or directory, or update the documented framework contract before changing the repository layout."
+    },
+    {
+      "id": "arch-002",
+      "description": "Feature tracker preserves WIP=1, dependency order, and lane ownership",
+      "check": "node scripts/framework-check.mjs arch:wip-contract",
+      "expect": "PASS",
+      "what": "feature_list.json allows multiple active features, an active feature with unmet dependencies, or (on a lane/<feature-id> branch) an active feature that does not match the lane's declared feature.",
+      "why": "The harness depends on a single active feature and explicit dependency ordering to keep sessions scoped, resumable, and verifiable. Worktree lanes (feat-010, D-017) extend this per-branch: a lane branch may only activate the feature it is named for, so concurrent lanes stay independently auditable.",
+      "fix": "Set at most one feature to active and ensure its dependencies are already passing before resuming implementation. On a lane/<feature-id> branch, the active feature must be <feature-id> — activate that feature or switch lanes."
+    },
+    {
+      "id": "arch-003",
+      "description": "Framework docs are project-specific, not template placeholders",
+      "check": "node scripts/framework-check.mjs arch:no-placeholders",
+      "expect": "PASS",
+      "what": "Core framework docs still contain placeholder template text.",
+      "why": "Reusable harness instructions must describe the actual framework contract; placeholder docs create false confidence and mislead downstream adopters.",
+      "fix": "Replace template copy in README, docs/PRODUCT.md, and docs/quality-document.md with framework-specific guidance and current state."
+    },
+    {
+      "id": "arch-004",
+      "description": "Harness manifest accurately declares reusable and instance surfaces",
+      "check": "node scripts/framework-check.mjs manifest",
+      "expect": "PASS",
+      "what": "The manifest is missing, malformed, or declares surfaces that do not exist in the repository.",
+      "why": "The reusability contract depends on a machine-readable classification of CORE, INSTANCE, and optional components; a manifest that drifts from the repo makes upgrades and adoption unpredictable.",
+      "fix": "Repair .harness/manifest.json so every declared surface exists and matches the repository layout."
+    },
+    {
+      "id": "arch-005",
+      "description": "Every tracked file is classified by the seam manifest (or exempted as product-owned)",
+      "check": "node scripts/framework-check.mjs manifest",
+      "expect": "PASS",
+      "what": "A tracked file is not declared as CORE, INSTANCE, TEMPLATE, or product-owned (productRoots or the docs/ default) in the manifest, or is declared twice.",
+      "why": "Reusability requires that distribution can answer, for every file, whether it ships as-is, ships as a skeleton, never ships, or belongs to the adopting project. Unclassified files get silently dropped or silently leaked — both break the seam contract.",
+      "fix": "Classify the file in .harness/manifest.json (core / instance / templates), or add its parent directory to productRoots if it is product-owned outside docs/."
+    },
+    {
+      "id": "arch-006",
+      "description": "Feature declarations carry no inline mutable state; sharded state stays consistent",
+      "check": "node scripts/framework-check.mjs arch:sharded-state",
+      "expect": "PASS",
+      "what": "A feature_list.json entry still declares state/status/evidence inline, or a file under .harness/state/ is invalid JSON, has an invalid state, or does not correspond to any declared feature.",
+      "why": "Sharded feature state (feat-011, D-017) only delivers conflict-free lane landings if feature_list.json truly stays declaration-only and every shard is a real, valid record of one feature's current state — drift here silently reintroduces the whole-file race the sharding exists to remove.",
+      "fix": "Run `node scripts/framework-check.mjs migrate-feature-state` to move inline state/evidence into .harness/state/<id>.json, or fix/remove the invalid or stray shard file."
+    }
+  ]
+}
