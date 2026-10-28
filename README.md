@@ -48,6 +48,15 @@ Each milestone ends with numbers in this README and an entry in the [learning lo
 | M6 Product and production | feat-014 to feat-018 | Review UI, replay and sandbox modes, observability, Docker and CI with evals |
 | M7 Integration | feat-019, feat-020 | MCP server, final README, diagram and demo |
 
+## Ingest issues
+
+```bash
+node tools/py.mjs -m issue_triage ingest astral-sh/uv            # resumable; run again to continue
+node tools/py.mjs -m issue_triage ingest astral-sh/uv --restart  # start over
+```
+
+Issues, labels, state reasons, `duplicateOf` links and up to 50 comments per issue are fetched oldest first through the GitHub GraphQL API (token from `ISSUE_TRIAGE_GITHUB_TOKEN` or `gh auth token`). Usernames and @mentions outside code are replaced by keyed pseudonyms before anything is written, and the data stays in the git-ignored `data/` folder ([D-003](DECISIONS.md#d-003-never-post-to-real-repositories)).
+
 ## Target analysis
 
 The scripts that chose the target live in [`backend/scripts/`](backend/scripts/) and use the authenticated `gh` CLI:

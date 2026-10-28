@@ -1,0 +1,46 @@
+{
+  "data": {
+    "rateLimit": {"remaining": 4990, "resetAt": "2026-10-27T20:00:00Z"},
+    "repository": {
+      "issues": {
+        "pageInfo": {"hasNextPage": true, "endCursor": "CURSOR_1"},
+        "nodes": [
+          {
+            "number": 1,
+            "title": "Resolver fails on Windows",
+            "body": "cc @bob — see `@pytest.fixture` and mail alice@example.com\n```python\n@dataclass\nclass A: ...\n```",
+            "createdAt": "2025-01-02T10:00:00Z",
+            "closedAt": "2025-01-05T09:00:00Z",
+            "state": "CLOSED",
+            "stateReason": "COMPLETED",
+            "authorAssociation": "NONE",
+            "author": {"login": "alice"},
+            "labels": {"nodes": [{"name": "bug"}, {"name": "area:windows"}]},
+            "duplicateOf": null,
+            "comments": {
+              "totalCount": 2,
+              "nodes": [
+                {"body": "Thanks @Alice, fixed in #2", "createdAt": "2025-01-03T08:00:00Z", "authorAssociation": "MEMBER", "author": {"login": "maint"}},
+                {"body": "Confirmed", "createdAt": "2025-01-04T08:00:00Z", "authorAssociation": "NONE", "author": null}
+              ]
+            }
+          },
+          {
+            "number": 3,
+            "title": "Same resolver failure",
+            "body": "",
+            "createdAt": "2025-02-01T10:00:00Z",
+            "closedAt": "2025-02-02T10:00:00Z",
+            "state": "CLOSED",
+            "stateReason": "DUPLICATE",
+            "authorAssociation": "CONTRIBUTOR",
+            "author": {"login": "bob"},
+            "labels": {"nodes": []},
+            "duplicateOf": {"number": 1, "repository": {"nameWithOwner": "acme/widgets"}},
+            "comments": {"totalCount": 75, "nodes": []}
+          }
+        ]
+      }
+    }
+  }
+}

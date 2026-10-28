@@ -1,0 +1,26 @@
+{
+  "data": {
+    "rateLimit": {"remaining": 42, "resetAt": "2026-10-27T20:00:00Z"},
+    "repository": {
+      "issues": {
+        "pageInfo": {"hasNextPage": false, "endCursor": "CURSOR_2"},
+        "nodes": [
+          {
+            "number": 4,
+            "title": "How do I pin Python?",
+            "body": "Question from @carol",
+            "createdAt": "2025-03-01T10:00:00Z",
+            "closedAt": null,
+            "state": "OPEN",
+            "stateReason": null,
+            "authorAssociation": "NONE",
+            "author": {"login": "carol"},
+            "labels": {"nodes": [{"name": "question"}]},
+            "duplicateOf": null,
+            "comments": {"totalCount": 0, "nodes": []}
+          }
+        ]
+      }
+    }
+  }
+}

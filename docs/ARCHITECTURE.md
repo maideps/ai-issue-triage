@@ -74,7 +74,7 @@ Issue source adapter            FastAPI service                         PostgreS
 
 Product directories (declared in `.harness/manifest.json` as `productRoots`):
 
-- `backend/` — FastAPI service, ingestion and evaluation code (Python). Layers: `api/` (presentation), `services/` (application: the agent flow and use cases), `domain/` (issues, labels, duplicate links, evaluation cases, rules), `infrastructure/` (database, vector search, GitHub client, LLM providers). `backend/scripts/` holds the target-analysis scripts. The layer import rules are enforced by `backend/tests/test_layers.py`.
+- `backend/` — FastAPI service, ingestion and evaluation code (Python). Layers: `api/` (presentation), `services/` (application: the agent flow and use cases), `domain/` (issues, labels, duplicate links, evaluation cases, rules), `infrastructure/` (database, vector search, GitHub client, LLM providers). `backend/scripts/` holds the target-analysis scripts. The layer import rules are enforced by `backend/tests/test_layers.py`. `main.py` (HTTP) and `cli.py` (`python -m issue_triage`) are composition roots above the layers: they wire infrastructure implementations into services. Ingested issues live in `data/github/<owner>__<name>/issues.jsonl` with a `state.json` resume cursor.
 - `tools/` — `py.mjs`, the launcher that runs the backend's Python tooling from the root npm scripts on any OS (D-006).
 - `evals/` — evaluation datasets (small committed samples) and results summaries.
 - `frontend/` — React + TypeScript review UI (added by feat-014).
