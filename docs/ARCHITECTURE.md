@@ -86,3 +86,4 @@ Key design rules:
 - Every evaluation case carries an as-of timestamp, and retrieval never returns items created after it (D-004).
 - Agent nodes exchange typed schemas, never free text, and each node receives only the context it declares.
 - Nothing is posted outside the sandbox allowlist (D-003).
+- Guardrails (`domain/guardrails.py`, `services/guardrails.py`): issue text is untrusted. Before any model call, secrets (tokens, keys, URL credentials, `*_PASSWORD=` values, private keys) and emails are replaced by `[REDACTED:<kind>]`, the body is fenced in `<issue>` delimiters (fake delimiters inside are neutralised), and injection phrases flag the issue for human review. After the call, every string field of the validated output is scanned again. On the 9,411 uv issues: 329 contain something redacted, 0 are flagged as injection after tuning out one false positive.
