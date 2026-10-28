@@ -67,6 +67,14 @@ node tools/py.mjs -m issue_triage load astral-sh/uv      # idempotent upsert fro
 
 Database tests use the same container (database `issue_triage_test`, recreated per run). They skip when Postgres is unreachable unless `ISSUE_TRIAGE_REQUIRE_DB=1`, which CI and the feature gates set.
 
+## Build the evaluation datasets
+
+```bash
+node tools/py.mjs -m issue_triage datasets astral-sh/uv --golden 50
+```
+
+Four time-split sets from 9,411 uv issues: 6,662 typed issues, 319 duplicate pairs, 1,997 question/answer pairs and 6,912 needs-info cases (387 positive). Details and rules in [`evals/datasets/`](evals/datasets/README.md).
+
 ## Target analysis
 
 The scripts that chose the target live in [`backend/scripts/`](backend/scripts/) and use the authenticated `gh` CLI:

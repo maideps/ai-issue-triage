@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     # Raw GitHub data stays here, outside git (D-003).
     data_dir: Path = REPO_ROOT / "data"
+    # Committed evaluation artefacts: small samples and results summaries.
+    evals_dir: Path = REPO_ROOT / "evals"
     # Matches the local docker-compose `db` service; demo credentials only.
     database_url: str = "postgresql+psycopg://triage:triage@localhost:5433/issue_triage"
     github_token: SecretStr | None = None

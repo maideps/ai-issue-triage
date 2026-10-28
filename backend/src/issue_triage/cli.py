@@ -4,6 +4,7 @@ Composition root (like ``main.py``): wires infrastructure into the use cases.
 """
 
 import argparse
+import json
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -11,10 +12,12 @@ from collections.abc import Sequence
 from issue_triage.config import Settings, get_settings
 from issue_triage.domain.pseudonymize import Pseudonymizer
 from issue_triage.domain.sources import IssueSource
+from issue_triage.infrastructure.dataset_files import write_json, write_jsonl
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions, upgrade
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
 from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urllib_transport
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
+from issue_triage.services.datasets import build_datasets, select_golden
 from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
 
@@ -68,9 +71,34 @@ def cmd_load(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_datasets(args: argparse.Namespace, settings: Settings) -> int:
+    repository = PostgresIssueRepository(make_sessions(make_engine(settings.database_url)))
+    datasets = build_datasets(repository, args.repository)
+    slug = args.repository.replace("/", "__")
+    # Full cases contain issue text: they stay in data/ (D-003). Stats carry no text.
+    out = settings.data_dir / "datasets" / slug
+    write_jsonl(out / "type.jsonl", datasets.types)
+    write_jsonl(out / "duplicates.jsonl", datasets.duplicates)
+    write_jsonl(out / "answers.jsonl", datasets.answers)
+    write_jsonl(out / "needs_info.jsonl", datasets.needs_info)
+    stats = datasets.stats()
+    write_json(settings.evals_dir / "datasets" / f"{slug}-stats.json", stats)
+    if args.golden:
+        golden = select_golden(datasets, size=args.golden)
+        write_jsonl(settings.evals_dir / "datasets" / "golden" / f"{slug}-golden.jsonl", golden)
+        print(f"golden sample: {len(golden)} issues")
+    print(json.dumps(stats, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="issue_triage")
     commands = parser.add_subparsers(dest="command", required=True)
+
+    datasets = commands.add_parser("datasets", help="build the time-split evaluation sets")
+    datasets.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    datasets.add_argument("--golden", type=int, default=0, help="also write a golden sample")
+    datasets.set_defaults(handler=cmd_datasets)
 
     db_upgrade = commands.add_parser("db-upgrade", help="apply database migrations")
     db_upgrade.set_defaults(handler=cmd_db_upgrade)

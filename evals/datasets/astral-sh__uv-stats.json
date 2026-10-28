@@ -1,0 +1,44 @@
+{
+  "repository": "astral-sh/uv",
+  "issues": 9411,
+  "test_split_from": "2025-09-12T07:10:14+00:00",
+  "type": {
+    "cases": 6662,
+    "classes": {
+      "bug": 2416,
+      "question": 2149,
+      "enhancement": 1555,
+      "other": 542
+    },
+    "splits": {
+      "train": 5119,
+      "test": 1543
+    }
+  },
+  "duplicates": {
+    "cases": 319,
+    "link_sources": {
+      "comment": 118,
+      "duplicateOf": 201
+    },
+    "splits": {
+      "train": 266,
+      "test": 53
+    }
+  },
+  "answers": {
+    "cases": 1997,
+    "splits": {
+      "train": 1627,
+      "test": 370
+    }
+  },
+  "needs_info": {
+    "cases": 6912,
+    "positives": 387,
+    "splits": {
+      "train": 5330,
+      "test": 1582
+    }
+  }
+}
