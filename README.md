@@ -8,7 +8,19 @@
 
 ## Status
 
-Planning done, no product code yet. The harness scaffold, the feature plan and the target analysis are in place. See [`feature_list.json`](feature_list.json) for the plan and [`PROGRESS.md`](PROGRESS.md) for the current state.
+Early development. The FastAPI service skeleton is in place (`GET /health`, typed settings, layered packages with their import rules tested). See [`feature_list.json`](feature_list.json) for the plan and [`PROGRESS.md`](PROGRESS.md) for the current state.
+
+## Backend quick start
+
+Requires Node.js >= 18 (the harness) and Python >= 3.11.
+
+```bash
+npm run setup:backend   # creates backend/.venv and installs the backend with dev tools
+npm run dev:backend     # serves http://localhost:8000 (docs at /docs)
+curl http://localhost:8000/health
+```
+
+Configuration comes from `ISSUE_TRIAGE_*` environment variables (see [`backend/.env.example`](backend/.env.example)). The harness commands cover the backend: `npm run lint` (ruff), `npm run typecheck` (mypy --strict), `npm run test` (pytest) and `npm run build` (compile check), all through [`tools/py.mjs`](tools/py.mjs) ([D-006](DECISIONS.md#d-006-backend-tooling-runs-through-a-small-node-launcher)).
 
 ## What it does
 

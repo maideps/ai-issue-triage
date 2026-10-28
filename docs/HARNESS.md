@@ -39,3 +39,5 @@
 | `make help` | `npm run help` |
 | — | `npm run harness-docs` |
 | — | `npm run prepublishOnly` |
+| — | `npm run setup:backend` |
+| — | `npm run dev:backend` |

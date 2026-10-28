@@ -89,3 +89,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: the harness contract stays intact and the bug gets fixed at its source.
 - Negative: `./init.sh` reports FAIL until the upstream fix lands.
+
+### D-006: Backend tooling runs through a small Node launcher
+
+**Date:** 2026-10-27
+**Status:** accepted
+**Context:** The harness resolves product verification layers from the root `package.json` scripts, but the backend is Python. The author works on Windows (virtualenv paths are `.venv/Scripts`, not `.venv/bin`) and does not have `uv` installed. ai-invoice-intake solved the same problem with a launcher (its D-003).
+**Decision:** `tools/py.mjs` finds the interpreter (`$ISSUE_TRIAGE_PYTHON`, then `backend/.venv`, then the system Python), prints a hint when dependencies are missing, and offers `setup`, which creates `backend/.venv` and installs the backend with dev tools. The root `lint`, `typecheck`, `test` and `build` scripts keep the harness's own check and append the backend command with `&&`. Ruff also covers `backend/scripts/`; mypy covers `src/` and `tests/`. CI installs Python 3.12 and runs `npm run setup:backend` before the check.
+**Alternatives considered:**
+- `uv` for environments and commands — Rejected for now: not installed on the author's machine, and the launcher already works across operating systems. Worth revisiting if dependency resolution gets slow.
+- A root `pyproject.toml` — Rejected: stack detection would pick Python and skip the harness's Node checks.
+**Consequences:**
+- Positive: one command surface (`npm run check`) covers harness and backend on every OS, matching the author's other repos.
+- Negative: a fresh clone must run `npm run setup:backend` once; the launcher says so when it is missing. The Starlette test client warns that `httpx` is deprecated in favour of `httpx2`; switching is deferred (see the feat-001 session note).

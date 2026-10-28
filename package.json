@@ -1,7 +1,7 @@
 {
   "name": "ai-issue-triage",
   "version": "0.1.0",
-  "description": "A general-purpose AI agent harness framework for building reliable, predictable multi-session engineering workflows",
+  "description": "AI Issue Triage: issue-triage copilot evaluated against real maintainer decisions",
   "license": "MIT",
   "files": [
     "AGENTS.md",
@@ -21,10 +21,10 @@
   ],
   "scripts": {
     "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run e2e && npm run verify-all",
-    "lint": "node scripts/framework-check.mjs lint",
-    "typecheck": "node scripts/framework-check.mjs typecheck",
-    "test": "node scripts/framework-check.mjs test",
-    "build": "node scripts/framework-check.mjs build",
+    "lint": "node scripts/framework-check.mjs lint && node tools/py.mjs -m ruff check . && node tools/py.mjs -m ruff format --check .",
+    "typecheck": "node scripts/framework-check.mjs typecheck && node tools/py.mjs -m mypy",
+    "test": "node scripts/framework-check.mjs test && node tools/py.mjs -m pytest -q",
+    "build": "node scripts/framework-check.mjs build && node tools/py.mjs -m compileall -q src",
     "e2e": "node scripts/framework-check.mjs e2e",
     "dev": "node scripts/framework-check.mjs dev",
     "check-arch": "node scripts/framework-check.mjs check-arch",
@@ -54,7 +54,9 @@
     "sweep": "node scripts/harness-sweep.mjs",
     "setup": "node scripts/framework-check.mjs setup",
     "help": "node scripts/framework-check.mjs help",
-    "prepublishOnly": "npm run check && npm run check-arch"
+    "prepublishOnly": "npm run check && npm run check-arch",
+    "setup:backend": "node tools/py.mjs setup",
+    "dev:backend": "node tools/py.mjs -m uvicorn issue_triage.main:app --reload --port 8000"
   },
   "bin": {
     "create-harness": "scripts/create-harness.mjs",

@@ -8,18 +8,19 @@ Rate each module on a scale of A (excellent) / B (good) / C (acceptable) / D (ne
 |---|---|---|---|---|---|
 | harness scaffold | B | n/a | B | B | n/a |
 | backend/scripts (target analysis) | D | C | B | n/a | n/a |
-| backend service | not started | not started | not started | not started | not started |
+| backend service (skeleton) | B | A | B | A | n/a |
 | frontend | not started | not started | not started | not started | not started |
 
 ## Summary
 
-- **Overall Quality Grade:** B (planning only; feature work has not started)
+- **Overall Quality Grade:** B (skeleton only; feature work has just begun)
 - **Blockers:** none
-- **Areas requiring attention:** the target-analysis scripts are untested exploration code and are not yet covered by the lint layer; feat-001 wires the backend tooling into the harness gates
+- **Areas requiring attention:** the target-analysis scripts are lint-clean but untested and untyped (outside mypy); the backend has only the health endpoint; the Starlette test client warns that `httpx` is deprecated
 
 ## Notes
 
 - Session 001 created the harness scaffold, the feature plan, decisions D-001 to D-004 and moved in the two target-analysis scripts; no product code yet.
+- Session 003 (feat-001) added the backend skeleton: 17 tests (health, settings, layer import rules), ruff clean, mypy --strict clean; ruff now covers backend/scripts/. Coverage graded B (health, settings and layer rules covered; nothing else exists yet).
 
 ---
 

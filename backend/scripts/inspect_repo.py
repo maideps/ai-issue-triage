@@ -16,8 +16,16 @@ from datetime import datetime
 from statistics import median
 
 # Label buckets tuned for astral-sh/uv; adjust per repo.
-TYPE_LABELS = {"bug", "enhancement", "question", "documentation", "performance",
-               "compatibility", "security", "wish"}
+TYPE_LABELS = {
+    "bug",
+    "enhancement",
+    "question",
+    "documentation",
+    "performance",
+    "compatibility",
+    "security",
+    "wish",
+}
 NEEDS_INFO_LABELS = {"needs-mre", "bot:needs-mre-comment"}
 PROCESS_PREFIXES = ("bot:", "internal", "build:", "test:", "project:", "ep-")
 MAINTAINER_ROLES = {"OWNER", "MEMBER", "COLLABORATOR"}
@@ -40,18 +48,18 @@ query($owner: String!, $name: String!, $after: String) {
     issues(states: CLOSED, first: 100, after: $after,
            orderBy: {field: CREATED_AT, direction: DESC}) {
       pageInfo { hasNextPage endCursor }
-      nodes { %s }
+      nodes { ISSUE_FIELDS }
     }
   }
-}""" % ISSUE_FIELDS
+}""".replace("ISSUE_FIELDS", ISSUE_FIELDS)
 
 SEARCH_QUERY = """
 query($q: String!, $after: String) {
   search(query: $q, type: ISSUE, first: 100, after: $after) {
     pageInfo { hasNextPage endCursor }
-    nodes { ... on Issue { %s } }
+    nodes { ... on Issue { ISSUE_FIELDS } }
   }
-}""" % ISSUE_FIELDS
+}""".replace("ISSUE_FIELDS", ISSUE_FIELDS)
 
 
 def graphql(query, **variables):
@@ -87,7 +95,7 @@ def fetch_search(q):
 
 
 def labels(issue):
-    return {l["name"] for l in issue["labels"]["nodes"]}
+    return {node["name"] for node in issue["labels"]["nodes"]}
 
 
 def is_process(label):
@@ -116,12 +124,14 @@ def resolve_original(issue, repo):
 
 def report_labels(sample):
     n = len(sample)
-    counts = Counter(l for i in sample for l in labels(i))
+    counts = Counter(label for i in sample for label in labels(i))
     typed = sum(1 for i in sample if labels(i) & TYPE_LABELS)
-    area = sum(1 for i in sample if any(l.startswith("area:") for l in labels(i)))
+    area = sum(1 for i in sample if any(label.startswith("area:") for label in labels(i)))
     needs_info = sum(1 for i in sample if labels(i) & NEEDS_INFO_LABELS)
     unlabeled = sum(1 for i in sample if not labels(i))
-    process_only = sum(1 for i in sample if labels(i) and all(is_process(l) for l in labels(i)))
+    process_only = sum(
+        1 for i in sample if labels(i) and all(is_process(label) for label in labels(i))
+    )
     multi_type = sum(1 for i in sample if len(labels(i) & TYPE_LABELS) > 1)
 
     print("\nLABEL COVERAGE")
@@ -133,18 +143,21 @@ def report_labels(sample):
     print(f"  no labels at all           {pct(unlabeled, n)}")
 
     print("\nTYPE LABELS")
-    for label in sorted(TYPE_LABELS, key=lambda l: -counts[l]):
+    for label in sorted(TYPE_LABELS, key=lambda label: -counts[label]):
         if counts[label]:
             print(f"  {label:28} {pct(counts[label], n)}")
 
     print("\nTOP AREA LABELS")
-    areas = [(l, c) for l, c in counts.most_common() if l.startswith("area:")]
+    areas = [(label, c) for label, c in counts.most_common() if label.startswith("area:")]
     for label, c in areas[:12]:
         print(f"  {label:28} {pct(c, n)}")
     print(f"  ({len(areas)} area labels used in sample)")
 
-    other = [(l, c) for l, c in counts.most_common()
-             if l not in TYPE_LABELS and not l.startswith("area:")]
+    other = [
+        (label, c)
+        for label, c in counts.most_common()
+        if label not in TYPE_LABELS and not label.startswith("area:")
+    ]
     print("\nOTHER LABELS")
     for label, c in other[:10]:
         print(f"  {label:28} {pct(c, n)}")
@@ -152,11 +165,17 @@ def report_labels(sample):
 
 def report_answers(sample):
     completed = [i for i in sample if i["stateReason"] == "COMPLETED"]
-    answered = [i for i in completed
-                if any(c["authorAssociation"] in MAINTAINER_ROLES for c in i["comments"]["nodes"])]
+    answered = [
+        i
+        for i in completed
+        if any(c["authorAssociation"] in MAINTAINER_ROLES for c in i["comments"]["nodes"])
+    ]
     questions = [i for i in sample if "question" in labels(i)]
-    q_answered = [i for i in questions
-                  if any(c["authorAssociation"] in MAINTAINER_ROLES for c in i["comments"]["nodes"])]
+    q_answered = [
+        i
+        for i in questions
+        if any(c["authorAssociation"] in MAINTAINER_ROLES for c in i["comments"]["nodes"])
+    ]
     print("\nANSWER GROUND TRUTH")
     print(f"  closed as completed        {pct(len(completed), len(sample))}")
     print(f"    ...with maintainer reply {pct(len(answered), len(completed))}")
@@ -191,7 +210,10 @@ def report_duplicates(repo, duplicates):
         print(f"  {source:28} {pct(c, n)}")
     print(f"  linked to an issue in {repo.split('/')[1]:6} {pct(same_repo, linked)} of linked")
     if gaps:
-        print(f"  original opened earlier    {pct(earlier, len(gaps))} of those with dates  <- valid for time-split eval")
+        print(
+            f"  original opened earlier    {pct(earlier, len(gaps))} of those with dates"
+            "  <- valid for time-split eval"
+        )
         print(f"  median gap original->dup   {median(gaps):>5} days")
 
 
@@ -205,8 +227,11 @@ def main():
     print(f"fetching {args.sample} recent closed issues...", file=sys.stderr)
     sample = fetch_recent(owner, name, args.sample)
     print("fetching all duplicates...", file=sys.stderr)
-    dups = {i["number"]: i for q in ("reason:duplicate", "label:duplicate")
-            for i in fetch_search(f"repo:{args.repo} is:issue {q}")}
+    dups = {
+        i["number"]: i
+        for q in ("reason:duplicate", "label:duplicate")
+        for i in fetch_search(f"repo:{args.repo} is:issue {q}")
+    }
 
     first, last = sample[-1]["createdAt"][:10], sample[0]["createdAt"][:10]
     print(f"SAMPLE  {len(sample)} closed issues of {args.repo}, created {first} -> {last}")

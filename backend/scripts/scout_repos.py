@@ -61,7 +61,7 @@ def scout(repo):
     )
 
     labels = gh(f"repos/{repo}/labels", per_page=100)
-    type_labels = [l["name"] for l in labels if TYPE_LABEL.search(l["name"])]
+    type_labels = [label["name"] for label in labels if TYPE_LABEL.search(label["name"])]
 
     tree = gh(f"repos/{repo}/git/trees/{meta['default_branch']}", recursive=1)
     doc_files = sum(1 for node in tree.get("tree", []) if DOC_PATH.search(node["path"]))
@@ -81,13 +81,15 @@ def scout(repo):
 
 def fit(r):
     """Rough 0-5 score against the selection criteria."""
-    return sum([
-        3_000 <= r["issues"] <= 25_000,
-        r["labeled_pct"] >= 60,
-        r["last_year"] >= 500,
-        r["duplicates"] >= 100,
-        r["doc_files"] >= 30,
-    ])
+    return sum(
+        [
+            3_000 <= r["issues"] <= 25_000,
+            r["labeled_pct"] >= 60,
+            r["last_year"] >= 500,
+            r["duplicates"] >= 100,
+            r["doc_files"] >= 30,
+        ]
+    )
 
 
 def main():
@@ -101,7 +103,10 @@ def main():
             print(f"  skipped: {err}", file=sys.stderr)
 
     rows.sort(key=lambda r: (fit(r), r["duplicates"]), reverse=True)
-    header = f"{'repo':26} {'lang':11} {'issues':>7} {'lab%':>5} {'12mo':>6} {'dups':>5} {'docs':>5} {'disc':>5} {'fit':>4}  type labels"
+    header = (
+        f"{'repo':26} {'lang':11} {'issues':>7} {'lab%':>5} {'12mo':>6} "
+        f"{'dups':>5} {'docs':>5} {'disc':>5} {'fit':>4}  type labels"
+    )
     print(header)
     print("-" * len(header))
     for r in rows:
