@@ -102,3 +102,17 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: one command surface (`npm run check`) covers harness and backend on every OS, matching the author's other repos.
 - Negative: a fresh clone must run `npm run setup:backend` once; the launcher says so when it is missing. Dev dependency `httpx2` replaces `httpx` because the Starlette test client deprecates `httpx` (switched in session 004, as in ai-invoice-intake).
+
+### D-007: Build on a fake LLM and local models; run gates without the framework's adoption matrix
+
+**Date:** 2026-10-27
+**Status:** accepted
+**Context:** The author asked for all remaining features to be built in one autonomous run, committing and pushing after each. No LLM API key is configured on the machine. The full `npm run check` takes about 8.5 minutes locally, almost all of it in the e2e layer's adoption matrix, which generates throwaway repos to test the harness framework itself, not this product.
+**Decision:** (1) Every LLM-backed step runs on the deterministic fake provider; real-model evaluation runs are left for when the author adds a key, and the eval tooling caches and commits only summaries. (2) Embeddings and the reranker use local sentence-transformers models. (3) The repository stays private until the README carries real numbers. (4) Feature gates run locally with `CW_SKIP_ADOPTION_MATRIX=1`, the same setting CI already uses; the matrix still runs on any manual `npm run check` without the variable. (5) New dependencies are limited to the D-002 stack the author approved.
+**Alternatives considered:**
+- Real-model runs during the build — Rejected for now: no key, and spend needs the author's approval.
+- API embeddings — Rejected: needs a key and costs money per index; local models are reproducible.
+- Running the adoption matrix in every gate — Rejected: about 7 extra minutes per feature for a test of the framework, not the product.
+**Consequences:**
+- Positive: the whole product builds and runs without secrets or spend; gates take minutes, not hours.
+- Negative: headline LLM metrics stay "fake provider" until a real run; PyTorch and model weights make the backend install heavy.
