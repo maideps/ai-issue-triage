@@ -21,4 +21,5 @@ After adding or updating a session note, regenerate this file with `node scripts
 - [Session 001 — 2026-10-27](progress/001-2026-10-27.md)
 - [Session 002 — 2026-10-27](progress/002-2026-10-27.md)
 - [Session 003 — 2026-10-27](progress/003-2026-10-27.md)
+- [Session 004 — 2026-10-27](progress/004-2026-10-27.md)
 <!-- END GENERATED PROGRESS -->

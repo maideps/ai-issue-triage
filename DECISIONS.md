@@ -101,4 +101,4 @@ This file records significant architectural decisions, their context, alternativ
 - A root `pyproject.toml` — Rejected: stack detection would pick Python and skip the harness's Node checks.
 **Consequences:**
 - Positive: one command surface (`npm run check`) covers harness and backend on every OS, matching the author's other repos.
-- Negative: a fresh clone must run `npm run setup:backend` once; the launcher says so when it is missing. The Starlette test client warns that `httpx` is deprecated in favour of `httpx2`; switching is deferred (see the feat-001 session note).
+- Negative: a fresh clone must run `npm run setup:backend` once; the launcher says so when it is missing. Dev dependency `httpx2` replaces `httpx` because the Starlette test client deprecates `httpx` (switched in session 004, as in ai-invoice-intake).
