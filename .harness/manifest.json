@@ -169,6 +169,7 @@
     "backend/",
     "evals/",
     "tools/",
+    "docker-compose.yml",
     ".github/workflows/publish.yml",
     "repo-completion-plan.md"
   ],
