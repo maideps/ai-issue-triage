@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # Matches the local docker-compose `db` service; demo credentials only.
     database_url: str = "postgresql+psycopg://triage:triage@localhost:5433/issue_triage"
     github_token: SecretStr | None = None
+    # Model per pipeline step, e.g. {"triage": "anthropic/claude-haiku-5-5"} as JSON.
+    # Everything defaults to the deterministic fake until a key is configured (D-007).
+    llm_default_model: str = "fake/default"
+    llm_models: dict[str, str] = {}
     pseudonym_salt: SecretStr = SecretStr("local-dev-salt")
 
 
