@@ -81,7 +81,7 @@ This file records significant architectural decisions, their context, alternativ
 ### D-005: Known baseline failure of `./init.sh` from a framework test
 
 **Date:** 2026-10-27
-**Status:** open (to be fixed upstream in ai-harness-framework, then applied with `harness-upgrade`)
+**Status:** resolved 2026-10-27 (fixed upstream in ai-harness-framework 1f526d5, applied via harness-upgrade)
 **Context:** `./init.sh` runs the verification chain with `CW_INIT_SH=1` so the placeholder check only warns on a first run. The runner unit test "ensureNoPlaceholders: a fresh create-harness output fails lint and arch-003 (#23)" in `tests/framework-check.test.mjs` spawns the runner with `{ ...process.env }`, inherits `CW_INIT_SH=1`, sees lint warn instead of fail, and fails. It passes when run alone and under `npm run check`. Reproduced 3/3 here and in ai-harness-framework itself at commit b77ec83.
 **Decision:** Do not edit CORE files in this repo. Fix it upstream (the test's `run()` helper should drop `CW_INIT_SH` unless the test sets it), then apply it here with `harness-upgrade`. Until then, `npm run check` is the baseline verification and a failing `./init.sh` whose only failure is this test is not a blocker.
 **Alternatives considered:**

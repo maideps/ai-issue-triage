@@ -19,4 +19,5 @@ After adding or updating a session note, regenerate this file with `node scripts
 ## Session Index
 
 - [Session 001 — 2026-10-27](progress/001-2026-10-27.md)
+- [Session 002 — 2026-10-27](progress/002-2026-10-27.md)
 <!-- END GENERATED PROGRESS -->
