@@ -8,18 +8,55 @@ import json
 import subprocess
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from issue_triage.config import Settings, get_settings
+from issue_triage.domain.evaluation import TypeCase
 from issue_triage.domain.pseudonymize import Pseudonymizer
 from issue_triage.domain.sources import IssueSource
-from issue_triage.infrastructure.dataset_files import write_json, write_jsonl
+from issue_triage.infrastructure.dataset_files import read_cases, write_json, write_jsonl
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions, upgrade
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
 from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urllib_transport
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.services.datasets import build_datasets, select_golden
+from issue_triage.services.eval_runner import run_type_eval
 from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
+from issue_triage.services.triage import Triager
+from issue_triage.wiring import build_llm_client
+
+
+def dataset_path(settings: Settings, repository: str, name: str) -> Path:
+    path = settings.data_dir / "datasets" / repository.replace("/", "__") / f"{name}.jsonl"
+    if not path.exists():
+        raise SystemExit(f"{path} not found: run `datasets {repository}` first")
+    return path
+
+
+def cmd_eval_triage(args: argparse.Namespace, settings: Settings) -> int:
+    cases = [
+        c
+        for c in read_cases(dataset_path(settings, args.repository, "type"), TypeCase)
+        if args.split == "all" or c.split == args.split
+    ]
+    if args.limit:
+        cases = cases[: args.limit]
+    llm = build_llm_client(settings)
+    summary = run_type_eval(
+        cases,
+        Triager(llm),
+        llm.ledger,
+        on_progress=lambda n: print(f"{n}/{len(cases)} classified", file=sys.stderr),
+    )
+    summary.update(repository=args.repository, split=args.split)
+    model = summary["models"][0].replace("/", "-") if summary["models"] else "none"
+    out = args.out or settings.evals_dir / "results" / f"type-{model}-{args.split}.json"
+    write_json(out, summary)
+    print(f"type triage on {summary['n']} {args.split} cases with {summary['models']}:")
+    print(f"  accuracy {summary['accuracy']:.3f}  macro-F1 {summary['macro_f1']:.3f}")
+    print(f"  cost ${summary['llm']['total']['cost_usd']:.4f}  written to {out}")
+    return 0
 
 
 def github_token(settings: Settings) -> str:
@@ -94,6 +131,13 @@ def cmd_datasets(args: argparse.Namespace, settings: Settings) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="issue_triage")
     commands = parser.add_subparsers(dest="command", required=True)
+
+    eval_triage = commands.add_parser("eval-triage", help="score type triage on a dataset split")
+    eval_triage.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    eval_triage.add_argument("--split", choices=["test", "train", "all"], default="test")
+    eval_triage.add_argument("--limit", type=int, default=0, help="first N cases only")
+    eval_triage.add_argument("--out", type=Path, default=None)
+    eval_triage.set_defaults(handler=cmd_eval_triage)
 
     datasets = commands.add_parser("datasets", help="build the time-split evaluation sets")
     datasets.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

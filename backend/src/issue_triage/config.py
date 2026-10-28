@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # Model per pipeline step, e.g. {"triage": "anthropic/claude-haiku-5-5"} as JSON.
     # Everything defaults to the deterministic fake until a key is configured (D-007).
     llm_default_model: str = "fake/default"
-    llm_models: dict[str, str] = {}
+    llm_models: dict[str, str] = {"triage": "fake/triage-keywords"}
     pseudonym_salt: SecretStr = SecretStr("local-dev-salt")
 
 

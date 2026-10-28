@@ -75,6 +75,20 @@ node tools/py.mjs -m issue_triage datasets astral-sh/uv --golden 50
 
 Four time-split sets from 9,411 uv issues: 6,662 typed issues, 319 duplicate pairs, 1,997 question/answer pairs and 6,912 needs-info cases (387 positive). Details and rules in [`evals/datasets/`](evals/datasets/README.md).
 
+## Evaluate triage
+
+```bash
+node tools/py.mjs -m issue_triage eval-triage astral-sh/uv            # test split, fake provider
+```
+
+| Type triage, 1,543 test issues | Accuracy | Macro-F1 | Cost |
+|---|---|---|---|
+| Majority class | 0.401 | 0.143 | $0 |
+| Keyword baseline (fake provider) | 0.613 | 0.526 | $0 |
+| Real model | pending an API key | | |
+
+Results and how to run a real model: [`evals/results/`](evals/results/README.md).
+
 ## Target analysis
 
 The scripts that chose the target live in [`backend/scripts/`](backend/scripts/) and use the authenticated `gh` CLI:

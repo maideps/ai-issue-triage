@@ -1,0 +1,96 @@
+{
+  "task": "type",
+  "created_at": "2026-10-28T03:01:43+00:00",
+  "prompt": "triage@v1",
+  "models": [
+    "fake/triage-keywords"
+  ],
+  "provider": "fake",
+  "n": 1543,
+  "accuracy": 0.6131,
+  "macro_f1": 0.5256,
+  "majority_baseline": {
+    "label": "bug",
+    "accuracy": 0.4012,
+    "macro_f1": 0.1431
+  },
+  "per_class": {
+    "bug": {
+      "precision": 0.5966,
+      "recall": 0.7884,
+      "f1": 0.6792,
+      "support": 619
+    },
+    "question": {
+      "precision": 0.7539,
+      "recall": 0.338,
+      "f1": 0.4668,
+      "support": 426
+    },
+    "enhancement": {
+      "precision": 0.6216,
+      "recall": 0.6543,
+      "f1": 0.6375,
+      "support": 457
+    },
+    "other": {
+      "precision": 0.283,
+      "recall": 0.3659,
+      "f1": 0.3191,
+      "support": 41
+    }
+  },
+  "confusion": {
+    "bug": {
+      "bug": 488,
+      "question": 20,
+      "enhancement": 95,
+      "other": 16
+    },
+    "question": {
+      "bug": 194,
+      "question": 144,
+      "enhancement": 77,
+      "other": 11
+    },
+    "enhancement": {
+      "bug": 122,
+      "question": 25,
+      "enhancement": 299,
+      "other": 11
+    },
+    "other": {
+      "bug": 14,
+      "question": 2,
+      "enhancement": 10,
+      "other": 15
+    }
+  },
+  "failures": 0,
+  "needs_human": 0,
+  "llm": {
+    "total": {
+      "calls": 1543,
+      "failed": 0,
+      "input_tokens": 1163638,
+      "output_tokens": 28817,
+      "cost_usd": 0.0,
+      "latency_ms_p50": 0.1,
+      "latency_ms_p95": 0.5
+    },
+    "by_step": {
+      "triage": {
+        "calls": 1543,
+        "failed": 0,
+        "input_tokens": 1163638,
+        "output_tokens": 28817,
+        "cost_usd": 0.0,
+        "latency_ms_p50": 0.1,
+        "latency_ms_p95": 0.5
+      }
+    }
+  },
+  "cost_per_case_usd": 0.0,
+  "repository": "astral-sh/uv",
+  "split": "test"
+}
