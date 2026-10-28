@@ -102,11 +102,14 @@ def test_retries_transient_errors_with_backoff() -> None:
     assert sleeps == [1.0, 2.0]
 
 
-def test_gives_up_after_max_retries() -> None:
-    transport = RecordedTransport(*[TransientGitHubError("down")] * 5)
+def test_gives_up_after_max_retries_with_capped_backoff() -> None:
+    sleeps: list[float] = []
+    transport = RecordedTransport(*[TransientGitHubError("down")] * 9)
 
     with pytest.raises(TransientGitHubError):
-        make_source(transport, []).fetch_page("acme/widgets", None)
+        make_source(transport, sleeps).fetch_page("acme/widgets", None)
+
+    assert sleeps == [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 60.0, 60.0]
 
 
 @pytest.mark.parametrize(

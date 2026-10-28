@@ -126,7 +126,8 @@ class GitHubGraphQLSource:
         *,
         page_size: int = 50,
         min_remaining: int = 100,
-        max_retries: int = 4,
+        max_retries: int = 8,
+        max_backoff: float = 60.0,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
@@ -134,6 +135,7 @@ class GitHubGraphQLSource:
         self._page_size = page_size
         self._min_remaining = min_remaining
         self._max_retries = max_retries
+        self._max_backoff = max_backoff
         self._sleep = sleep
         self._now = now
         self._wait_until: datetime | None = None
@@ -175,5 +177,5 @@ class GitHubGraphQLSource:
             except TransientGitHubError:
                 if attempt == self._max_retries:
                     raise
-                self._sleep(2.0**attempt)
+                self._sleep(min(2.0**attempt, self._max_backoff))
         raise AssertionError("unreachable")
