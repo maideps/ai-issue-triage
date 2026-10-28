@@ -8,8 +8,11 @@ dynamic = ["version"]
 description = "AI Issue Triage backend: FastAPI service, ingestion and evaluation"
 requires-python = ">=3.11"
 dependencies = [
+    "alembic>=1.13",
     "fastapi>=0.115",
+    "psycopg[binary]>=3.2",
     "pydantic-settings>=2.5",
+    "sqlalchemy>=2.0",
     "uvicorn[standard]>=0.30",
 ]
 
@@ -23,6 +26,14 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+issue_triage = [
+    "py.typed",
+    "infrastructure/db/migrations/*.py",
+    "infrastructure/db/migrations/*.mako",
+    "infrastructure/db/migrations/versions/*.py",
+]
 
 [tool.setuptools.dynamic]
 version = { attr = "issue_triage.__version__" }

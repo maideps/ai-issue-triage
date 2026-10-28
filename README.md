@@ -57,6 +57,16 @@ node tools/py.mjs -m issue_triage ingest astral-sh/uv --restart  # start over
 
 Issues, labels, state reasons, `duplicateOf` links and up to 50 comments per issue are fetched oldest first through the GitHub GraphQL API (token from `ISSUE_TRIAGE_GITHUB_TOKEN` or `gh auth token`). Usernames and @mentions outside code are replaced by keyed pseudonyms before anything is written, and the data stays in the git-ignored `data/` folder ([D-003](DECISIONS.md#d-003-never-post-to-real-repositories)).
 
+## Load issues into PostgreSQL
+
+```bash
+docker compose up -d db                                  # PostgreSQL 16 + pgvector on port 5433
+node tools/py.mjs -m issue_triage db-upgrade             # apply Alembic migrations
+node tools/py.mjs -m issue_triage load astral-sh/uv      # idempotent upsert from data/
+```
+
+Database tests use the same container (database `issue_triage_test`, recreated per run). They skip when Postgres is unreachable unless `ISSUE_TRIAGE_REQUIRE_DB=1`, which CI and the feature gates set.
+
 ## Target analysis
 
 The scripts that chose the target live in [`backend/scripts/`](backend/scripts/) and use the authenticated `gh` CLI:

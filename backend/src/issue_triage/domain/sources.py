@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from issue_triage.domain.issues import Issue
@@ -38,3 +39,15 @@ class IssueStore(Protocol):
     def reset(self, repository: str) -> None: ...
 
     def read_all(self, repository: str) -> list[Issue]: ...
+
+
+class IssueRepository(Protocol):
+    """The queryable home of issues once they are loaded (PostgreSQL in production)."""
+
+    def upsert(self, issues: Sequence[Issue]) -> int: ...
+
+    def get(self, repository: str, number: int) -> Issue | None: ...
+
+    def list(self, repository: str, *, created_before: datetime | None = None) -> list[Issue]: ...
+
+    def count(self, repository: str) -> int: ...
