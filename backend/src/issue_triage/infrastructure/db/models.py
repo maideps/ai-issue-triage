@@ -85,3 +85,20 @@ class DocChunkRow(Base):
     heading: Mapped[str] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+
+class IssueEmbeddingRow(Base):
+    __tablename__ = "issue_embeddings"
+    __table_args__ = (
+        Index(
+            "ix_issue_embeddings_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    issue_id: Mapped[int] = mapped_column(ForeignKey("issues.id", ondelete="CASCADE"), unique=True)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))

@@ -84,6 +84,19 @@ node tools/py.mjs -m issue_triage eval-docs astral-sh/uv    # compare chunkers o
 
 72 uv docs pages become 987 heading chunks (default, [D-008](DECISIONS.md#d-008-heading-based-chunks-with-a-local-384-dimension-embedding-model)) or 1,818 fixed windows, embedded locally with `all-MiniLM-L6-v2` into pgvector with an HNSW index. Test-split MRR: 0.305 (heading) vs 0.290 (fixed).
 
+## Find duplicates
+
+```bash
+node tools/py.mjs -m issue_triage issues-embed astral-sh/uv      # 9,411 issue embeddings into pgvector
+node tools/py.mjs -m issue_triage eval-duplicates astral-sh/uv --split all
+```
+
+| Duplicate search, 319 maintainer-linked pairs | recall@10 | MRR@10 |
+|---|---|---|
+| Vector | 0.398 | 0.211 |
+| Keyword (BM25) | 0.401 | 0.219 |
+| Hybrid (RRF) | 0.467 | 0.235 |
+
 ## Evaluate triage
 
 ```bash

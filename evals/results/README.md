@@ -12,6 +12,18 @@ Metric summaries only (no issue text, D-003). Each file records the prompt versi
 
 Per class F1 for the keyword baseline: bug 0.68 (619 issues), enhancement 0.64 (457), question 0.47 (426), other 0.32 (41).
 
+## Duplicate detection (feat-009)
+
+Ground truth: the original linked when maintainers closed an issue as a duplicate. Every search is restricted to issues created before the duplicate, so all 319 pairs are time-valid (the train/test split only matters for trained models).
+
+| Mode | recall@1 | recall@5 | recall@10 | MRR@10 | Test split (n=53) recall@10 |
+|---|---|---|---|---|---|
+| Vector (`all-MiniLM-L6-v2`, pgvector HNSW) | 0.141 | 0.301 | 0.398 | 0.211 | 0.453 |
+| Keyword (BM25) | 0.154 | 0.314 | 0.401 | 0.219 | 0.472 |
+| Hybrid (reciprocal rank fusion) | 0.144 | 0.351 | 0.467 | 0.235 | 0.509 |
+
+Files: [duplicates-all.json](duplicates-all.json), [duplicates-test.json](duplicates-test.json). Keyword search alone matches embeddings because duplicate reports share error strings and version specifiers; fusing both adds about 7 points of recall@10.
+
 ## Doc retrieval: chunking strategies (D-008)
 
 Ground truth: the uv docs pages linked in the first maintainer answer to a question. Docs at commit 21a92c1632 (last before the test split), `all-MiniLM-L6-v2` embeddings, pgvector HNSW.

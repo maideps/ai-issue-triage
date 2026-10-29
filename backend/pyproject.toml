@@ -14,6 +14,7 @@ dependencies = [
     "pgvector>=0.3",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.5",
+    "rank-bm25>=0.2",
     "sentence-transformers>=3.0",
     "sqlalchemy>=2.0",
     "uvicorn[standard]>=0.30",
@@ -56,3 +57,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 strict = true
 python_version = "3.11"
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["rank_bm25"]
+ignore_missing_imports = true

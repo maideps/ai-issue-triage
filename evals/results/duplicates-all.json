@@ -1,0 +1,33 @@
+{
+  "task": "duplicates",
+  "repository": "astral-sh/uv",
+  "split": "all",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "ground_truth": "original linked when maintainers closed an issue as a duplicate",
+  "results": [
+    {
+      "mode": "vector",
+      "n": 319,
+      "recall_at_1": 0.1411,
+      "recall_at_5": 0.3009,
+      "recall_at_10": 0.3981,
+      "mrr_at_10": 0.2113
+    },
+    {
+      "mode": "keyword",
+      "n": 319,
+      "recall_at_1": 0.1536,
+      "recall_at_5": 0.3135,
+      "recall_at_10": 0.4013,
+      "mrr_at_10": 0.2188
+    },
+    {
+      "mode": "hybrid",
+      "n": 319,
+      "recall_at_1": 0.1442,
+      "recall_at_5": 0.3511,
+      "recall_at_10": 0.4671,
+      "mrr_at_10": 0.2346
+    }
+  ]
+}
