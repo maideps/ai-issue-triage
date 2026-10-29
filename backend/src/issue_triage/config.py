@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     # Raw GitHub data stays here, outside git (D-003).
     data_dir: Path = REPO_ROOT / "data"
+    # Local embedding model (D-007); its size must match EMBEDDING_DIM in the migrations.
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_dim: int = 384
+    docs_base_url: str = "https://docs.astral.sh/uv/"
     # Committed evaluation artefacts: small samples and results summaries.
     evals_dir: Path = REPO_ROOT / "evals"
     # Matches the local docker-compose `db` service; demo credentials only.

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
+from issue_triage.domain.docs import page_key
 from issue_triage.domain.issues import Issue
 
 TypeClass = Literal["bug", "question", "enhancement", "other"]
@@ -153,4 +154,41 @@ def build_needs_info_cases(issues: Iterable[Issue], boundary: datetime) -> list[
         needs_info = bool(NEEDS_INFO_LABELS.intersection(issue.labels))
         if needs_info or type_class(issue) is not None:
             cases.append(NeedsInfoCase(*_base(issue, boundary), needs_info=needs_info))
+    return cases
+
+
+@dataclass(frozen=True)
+class DocLinkCase(CaseBase):
+    """A question whose maintainer answer linked documentation pages (feat-008)."""
+
+    pages: tuple[str, ...]
+
+
+def docs_link_pages(text: str, base_url: str) -> tuple[str, ...]:
+    """Page keys of every link under ``base_url`` in ``text``, in order, deduplicated."""
+    pattern = re.compile(re.escape(base_url.rstrip("/")) + r"/([\w\-/.]*)")
+    pages: list[str] = []
+    for path in pattern.findall(text):
+        key = page_key(path)
+        if key and key not in pages:
+            pages.append(key)
+    return tuple(pages)
+
+
+def build_doc_link_cases(answers: Iterable[AnswerCase], base_url: str) -> list[DocLinkCase]:
+    cases: list[DocLinkCase] = []
+    for answer in answers:
+        pages = docs_link_pages(answer.reference_answer, base_url)
+        if pages:
+            cases.append(
+                DocLinkCase(
+                    answer.repository,
+                    answer.number,
+                    answer.as_of,
+                    answer.title,
+                    answer.body,
+                    answer.split,
+                    pages,
+                )
+            )
     return cases

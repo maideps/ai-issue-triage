@@ -11,8 +11,10 @@ dependencies = [
     "alembic>=1.13",
     "fastapi>=0.115",
     "litellm>=1.50",
+    "pgvector>=0.3",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.5",
+    "sentence-transformers>=3.0",
     "sqlalchemy>=2.0",
     "uvicorn[standard]>=0.30",
 ]

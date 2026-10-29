@@ -116,3 +116,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: the whole product builds and runs without secrets or spend; gates take minutes, not hours.
 - Negative: headline LLM metrics stay "fake provider" until a real run; PyTorch and model weights make the backend install heavy.
+
+### D-008: Heading-based chunks with a local 384-dimension embedding model
+
+**Date:** 2026-10-29
+**Status:** accepted
+**Context:** Doc-grounded answers (feat-011) need the target's documentation retrievable by issue text. Two chunkers were compared on a ground truth taken from maintainers: the uv docs pages linked in the first maintainer answer to a question (253 cases; 50 in the test split). Docs come from the last commit before the test split starts (21a92c1632, 72 pages), so test issues never see newer documentation (D-004). Embeddings: `sentence-transformers/all-MiniLM-L6-v2`, normalised, cosine distance in pgvector with an HNSW index.
+**Decision:** Use heading-based chunks (one per section, breadcrumb prefix, long sections split by paragraph) as the default. On the 50 test cases: heading hit@1 0.240, hit@5 0.400, MRR 0.305 with 987 chunks; fixed 1,000-character windows with 200 overlap hit@1 0.200, hit@5 0.440, MRR 0.290 with 1,818 chunks. On all 253 cases (not time-valid for the train split, a larger-sample check only) fixed windows lead slightly (MRR 0.278 vs 0.255).
+**Alternatives considered:**
+- Fixed windows — Not chosen: no clear quality win at this sample size, nearly twice the chunks, and windows cut sections mid-sentence, which makes worse citations for drafted replies.
+- A larger embedding model — Deferred: hybrid search and reranking (feat-009, feat-010) are the planned next levers; switching models changes `EMBEDDING_DIM` and needs a migration.
+**Consequences:**
+- Positive: self-contained, citable chunks; a smaller index.
+- Negative: the vector column is fixed at 384 dimensions; the evaluation sample is small (50), so the comparison is indicative, not conclusive.

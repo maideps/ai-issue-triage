@@ -12,6 +12,17 @@ Metric summaries only (no issue text, D-003). Each file records the prompt versi
 
 Per class F1 for the keyword baseline: bug 0.68 (619 issues), enhancement 0.64 (457), question 0.47 (426), other 0.32 (41).
 
+## Doc retrieval: chunking strategies (D-008)
+
+Ground truth: the uv docs pages linked in the first maintainer answer to a question. Docs at commit 21a92c1632 (last before the test split), `all-MiniLM-L6-v2` embeddings, pgvector HNSW.
+
+| Chunker | Chunks | Test (n=50) hit@1 | hit@5 | MRR | All (n=253) MRR |
+|---|---|---|---|---|---|
+| Heading sections | 987 | 0.240 | 0.400 | 0.305 | 0.255 |
+| Fixed 1,000 chars, 200 overlap | 1,818 | 0.200 | 0.440 | 0.290 | 0.278 |
+
+Files: [chunking-test.json](chunking-test.json), [chunking-all.json](chunking-all.json). The "all" run is not time-valid for train-split issues (they predate the docs snapshot); it is a larger-sample check only.
+
 To run a real model, set the provider's key (for example `ANTHROPIC_API_KEY`) and map the step:
 
 ```bash

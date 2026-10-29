@@ -1,0 +1,29 @@
+{
+  "task": "doc-retrieval",
+  "repository": "astral-sh/uv",
+  "split": "all",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "ground_truth": "doc pages linked in the first maintainer answer to a question",
+  "results": [
+    {
+      "chunker": "heading",
+      "n": 253,
+      "k": 5,
+      "chunks": 987,
+      "hit_at_1": 0.17,
+      "hit_at_5": 0.3874,
+      "mrr": 0.2545,
+      "search_ms_p50": 57.56
+    },
+    {
+      "chunker": "fixed",
+      "n": 253,
+      "k": 5,
+      "chunks": 1818,
+      "hit_at_1": 0.2016,
+      "hit_at_5": 0.4032,
+      "mrr": 0.2777,
+      "search_ms_p50": 62.22
+    }
+  ]
+}

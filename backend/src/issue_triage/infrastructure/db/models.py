@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     DateTime,
     ForeignKey,
@@ -13,6 +14,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# Must match the embedding model's output size (all-MiniLM-L6-v2: 384); see D-008.
+EMBEDDING_DIM = 384
 
 
 class Base(DeclarativeBase):
@@ -57,3 +61,27 @@ class IssueRow(Base):
     comments: Mapped[list[CommentRow]] = relationship(
         order_by=CommentRow.position, cascade="all, delete-orphan", passive_deletes=True
     )
+
+
+class DocChunkRow(Base):
+    __tablename__ = "doc_chunks"
+    __table_args__ = (
+        Index("ix_doc_chunks_source_chunker", "source", "chunker"),
+        Index(
+            "ix_doc_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(200))
+    commit: Mapped[str] = mapped_column(String(40))
+    chunker: Mapped[str] = mapped_column(String(16))
+    page: Mapped[str] = mapped_column(String(300))
+    position: Mapped[int] = mapped_column(Integer)
+    heading: Mapped[str] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))

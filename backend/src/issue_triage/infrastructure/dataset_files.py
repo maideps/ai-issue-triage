@@ -43,4 +43,5 @@ def read_cases(path: Path, case_type: type[T]) -> list[T]:
 
 def write_json(path: Path, data: dict[str, Any] | Sequence[Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    path.write_text(text, encoding="utf-8", newline="\n")  # LF on Windows too

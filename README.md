@@ -75,6 +75,15 @@ node tools/py.mjs -m issue_triage datasets astral-sh/uv --golden 50
 
 Four time-split sets from 9,411 uv issues: 6,662 typed issues, 319 duplicate pairs, 1,997 question/answer pairs and 6,912 needs-info cases (387 positive). Details and rules in [`evals/datasets/`](evals/datasets/README.md).
 
+## Index the documentation
+
+```bash
+node tools/py.mjs -m issue_triage docs-index astral-sh/uv   # docs as of the test-split start, both chunkers
+node tools/py.mjs -m issue_triage eval-docs astral-sh/uv    # compare chunkers on maintainer-linked pages
+```
+
+72 uv docs pages become 987 heading chunks (default, [D-008](DECISIONS.md#d-008-heading-based-chunks-with-a-local-384-dimension-embedding-model)) or 1,818 fixed windows, embedded locally with `all-MiniLM-L6-v2` into pgvector with an HNSW index. Test-split MRR: 0.305 (heading) vs 0.290 (fixed).
+
 ## Evaluate triage
 
 ```bash

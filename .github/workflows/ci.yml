@@ -39,6 +39,9 @@ jobs:
 
       - name: Install the backend with dev tools
         run: npm run setup:backend
+        env:
+          # CPU-only PyTorch for sentence-transformers; PyPI's default Linux wheel bundles CUDA.
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
 
       - name: Verify project
         run: npm run check
