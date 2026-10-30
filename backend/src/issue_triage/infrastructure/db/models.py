@@ -23,6 +23,15 @@ class Base(DeclarativeBase):
     pass
 
 
+def owned_by_alembic(
+    obj: object, name: str | None, type_: str, reflected: bool, compare_to: object
+) -> bool:
+    """Alembic include_object hook: ignore tables it does not own (LangGraph's checkpoint
+    tables are created by ``PostgresSaver.setup()``) and their indexes."""
+    table = name if type_ == "table" else getattr(getattr(obj, "table", None), "name", None)
+    return table is None or table in Base.metadata.tables
+
+
 class CommentRow(Base):
     __tablename__ = "comments"
 

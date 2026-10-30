@@ -107,6 +107,15 @@ node tools/py.mjs -m issue_triage eval-answers astral-sh/uv     # 370 test-split
 
 Drafts cite the retrieved doc chunks they rely on; a citation to anything not retrieved, low confidence or no citation sends the draft to a human. Baseline with the fake drafter: citation validity 1.00, lexical faithfulness 0.71, reply-to-maintainer similarity 0.39, same docs page as the maintainer in 24% of linked cases ([D-010](DECISIONS.md#d-010-native-llm-free-answer-metrics-until-a-judge-model-is-configured), [results](evals/results/README.md)).
 
+## Run the agent
+
+```bash
+node tools/py.mjs -m issue_triage agent-run astral-sh/uv 17846                 # replay as of its creation
+node tools/py.mjs -m issue_triage agent-review astral-sh/uv 17846 --approve    # or --edit "..." / --reject
+```
+
+A LangGraph flow (guardrails → triage → similar issues → rule-based decision → draft → human gate) with a Postgres checkpointer: the run waits at the gate across restarts and resumes from its last completed node after a failure ([D-011](DECISIONS.md#d-011-one-langgraph-flow-rule-based-routing-a-human-gate-on-every-proposal)). Replaying #17846, it proposed a duplicate of #17791, the same macOS torch-reinstall bug; maintainers had linked #17711, so the review edited the reply.
+
 ## Evaluate triage
 
 ```bash

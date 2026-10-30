@@ -3,7 +3,7 @@
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from issue_triage.infrastructure.db.models import Base
+from issue_triage.infrastructure.db.models import Base, owned_by_alembic
 
 config = context.config
 target_metadata = Base.metadata
@@ -16,7 +16,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with engine.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=owned_by_alembic,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

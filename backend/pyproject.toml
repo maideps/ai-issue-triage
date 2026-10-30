@@ -10,6 +10,8 @@ requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.13",
     "fastapi>=0.115",
+    "langgraph>=1.0",
+    "langgraph-checkpoint-postgres>=3.0",
     "litellm>=1.50",
     "pgvector>=0.3",
     "psycopg[binary]>=3.2",
@@ -45,6 +47,8 @@ version = { attr = "issue_triage.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Third-party deprecation noise on Python 3.14 (langsmith, pulled in by langgraph).
+filterwarnings = ["ignore::DeprecationWarning:langsmith.*"]
 
 [tool.ruff]
 line-length = 100

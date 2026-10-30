@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from issue_triage.domain.issues import Comment, DuplicateLink, Issue
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
-from issue_triage.infrastructure.db.models import Base
+from issue_triage.infrastructure.db.models import Base, owned_by_alembic
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.services.loading import load_issues
 
@@ -47,7 +47,8 @@ def repository(sessions: sessionmaker[Session]) -> PostgresIssueRepository:
 def test_migrations_match_the_orm_models(database_url: str) -> None:
     engine = create_engine(database_url)
     with engine.connect() as connection:
-        diff = compare_metadata(MigrationContext.configure(connection), Base.metadata)
+        context = MigrationContext.configure(connection, opts={"include_object": owned_by_alembic})
+        diff = compare_metadata(context, Base.metadata)
     engine.dispose()
 
     assert diff == []

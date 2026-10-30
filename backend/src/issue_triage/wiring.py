@@ -3,10 +3,22 @@
 from collections.abc import Mapping
 
 from issue_triage.config import Settings
+from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
+from issue_triage.infrastructure.db.engine import make_engine, make_sessions
+from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorIndex
+from issue_triage.infrastructure.db.issues import PostgresIssueRepository
+from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
+from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.llm.fake import FakeHandler, FakeLLMProvider
 from issue_triage.infrastructure.llm.fake_handlers import DEFAULT_HANDLERS
 from issue_triage.infrastructure.llm.litellm_provider import LiteLLMProvider, RoutingProvider
+from issue_triage.services.agent.graph import AgentDeps
+from issue_triage.services.answers import AnswerDrafter, DocRetriever
+from issue_triage.services.docs_index import issue_query
+from issue_triage.services.duplicates import SimilarIssueFinder
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
+from issue_triage.services.query_rewrite import QueryRewriter
+from issue_triage.services.triage import Triager
 
 
 def build_llm_client(
@@ -18,3 +30,29 @@ def build_llm_client(
     provider = RoutingProvider(fake=FakeLLMProvider(handlers), real=LiteLLMProvider())
     router = ModelRouter(settings.llm_models, settings.llm_default_model)
     return LLMClient(provider, router, ledger)
+
+
+def build_agent_deps(settings: Settings, repository: str) -> AgentDeps:
+    """Everything the triage graph needs, on the configured models and databases."""
+    sessions = make_sessions(make_engine(settings.database_url))
+    issues = PostgresIssueRepository(sessions).list(repository)
+    texts = {i.number: issue_query(i.title, i.body) for i in issues}
+    embedder = SentenceTransformerEmbedder(settings.embedding_model, settings.embedding_dim)
+    llm = build_llm_client(settings)
+    finder = SimilarIssueFinder(
+        repository,
+        embedder,
+        PostgresIssueVectorIndex(sessions),
+        Bm25IssueIndex(issues),
+        rewriter=QueryRewriter(llm),
+    )
+    drafter = AnswerDrafter(
+        llm, DocRetriever(embedder, PostgresChunkRepository(sessions), repository)
+    )
+    return AgentDeps(
+        triager=Triager(llm),
+        finder=finder,
+        drafter=drafter,
+        embed=embedder.embed,
+        candidate_text=texts.get,
+    )

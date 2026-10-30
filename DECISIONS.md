@@ -155,3 +155,17 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: CI can run the answer evaluation on cached data with zero spend; the metrics are transparent and reproducible.
 - Negative: lexical faithfulness is a proxy (paraphrases score low); the README must not present fake-judge scores as quality.
+
+### D-011: One LangGraph flow, rule-based routing, a human gate on every proposal
+
+**Date:** 2026-10-30
+**Status:** accepted
+**Context:** feat-012 assembles the pieces (guardrails, triage, similar-issue search, doc-grounded answers) into an agent. The ebook's five agent decisions apply: how many agents, what context each gets, where state lives, which decisions need no LLM, and when the system stops deciding.
+**Decision:** One graph with single-purpose nodes rather than several autonomous agents: `guard → triage → retrieve → decide → draft_<action> → human_gate → finalize`. Each node declares the state keys it reads and writes, and a wrapper enforces both (`ContextViolation` on an undeclared write); hand-offs are Pydantic schemas stored as plain data. State lives in LangGraph's Postgres checkpointer on the application database, keyed by `owner/name#number`, so a failed run resumes from its last completed node and a pending review survives restarts. `decide` is code, not an LLM: duplicate when the best earlier issue's embedding similarity is at least 0.8, otherwise answer for questions, ask for information for bug reports with no version or reproduction, else a maintainer-facing summary. Every proposal stops at `human_gate` (`interrupt()`); `needs_attention` only orders the queue.
+**Alternatives considered:**
+- Separate agents per action that hand work to each other — Rejected: the actions share all upstream context and never run in parallel; splitting them adds hand-offs without a different decision to make.
+- An LLM router for the action — Rejected: four outcomes from typed signals is a rule; an LLM would add cost and nondeterminism to the cheapest step.
+- Auto-posting high-confidence drafts — Rejected: D-003 and uv's AI policy; a human approves everything.
+**Consequences:**
+- Positive: every node's context is inspectable in code; runs are resumable and auditable; the routing step costs nothing.
+- Negative: the 0.8 duplicate threshold is not calibrated yet. In a real replay (#17846) the agent proposed #17791, a true duplicate the maintainers had not linked, while they linked #17711; the reviewer corrected it through an edit.

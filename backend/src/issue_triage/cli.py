@@ -21,6 +21,7 @@ from issue_triage.domain.evaluation import (
 )
 from issue_triage.domain.pseudonymize import Pseudonymizer
 from issue_triage.domain.sources import IssueSource
+from issue_triage.infrastructure.checkpointer import postgres_checkpointer
 from issue_triage.infrastructure.dataset_files import read_cases, write_json, write_jsonl
 from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions, upgrade
@@ -32,6 +33,9 @@ from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urlli
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.reranker import CrossEncoderReranker
+from issue_triage.services.agent.graph import build_graph
+from issue_triage.services.agent.runner import IssueInput, RunStatus, TriageAgent
+from issue_triage.services.agent.state import Review
 from issue_triage.services.answer_eval import Judge, evaluate_answers
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.datasets import build_datasets, select_golden
@@ -47,7 +51,7 @@ from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
 from issue_triage.services.query_rewrite import QUERY_REWRITE_STEP, QueryRewriter
 from issue_triage.services.triage import Triager
-from issue_triage.wiring import build_llm_client
+from issue_triage.wiring import build_agent_deps, build_llm_client
 
 
 def dataset_path(settings: Settings, repository: str, name: str) -> Path:
@@ -218,6 +222,53 @@ def cmd_eval_answers(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def print_status(status: RunStatus) -> None:
+    print(f"{status.thread_id}: next={list(status.next_nodes) or 'done'}")
+    if status.decision:
+        print(f"  decision: {status.decision.action} ({status.decision.reason})")
+    if status.proposal:
+        attention = " [needs attention]" if status.proposal.needs_attention else ""
+        print(f"  proposal ({status.proposal.confidence:.2f}){attention}: {status.proposal.text}")
+        print(f"  citations: {status.proposal.citations}")
+    if status.outcome:
+        print(f"  outcome: {status.outcome.status}; final text: {status.outcome.final_text}")
+
+
+def cmd_agent_run(args: argparse.Namespace, settings: Settings) -> int:
+    """Replay a stored issue through the graph as of its creation time (D-004)."""
+    issue = issue_repository(settings).get(args.repository, args.number)
+    if issue is None:
+        raise SystemExit(f"{args.repository}#{args.number} is not loaded")
+    with postgres_checkpointer(settings.database_url) as saver:
+        agent = TriageAgent(build_graph(build_agent_deps(settings, args.repository), saver))
+        existing = agent.status(args.repository, args.number)
+        if existing.next_nodes or existing.outcome:
+            status = (
+                agent.resume(args.repository, args.number)
+                if existing.next_nodes != ("human_gate",)
+                else existing
+            )
+        else:
+            status = agent.start(
+                IssueInput(
+                    issue.repository, issue.number, issue.title, issue.body, issue.created_at
+                )
+            )
+        print_status(status)
+    return 0
+
+
+def cmd_agent_review(args: argparse.Namespace, settings: Settings) -> int:
+    if args.edit:
+        review = Review(decision="edit", text=args.edit, reviewer=args.reviewer)
+    else:
+        review = Review(decision="approve" if args.approve else "reject", reviewer=args.reviewer)
+    with postgres_checkpointer(settings.database_url) as saver:
+        agent = TriageAgent(build_graph(build_agent_deps(settings, args.repository), saver))
+        print_status(agent.review(args.repository, args.number, review))
+    return 0
+
+
 def cmd_eval_docs(args: argparse.Namespace, settings: Settings) -> int:
     answers = [
         a
@@ -378,6 +429,21 @@ def build_parser() -> argparse.ArgumentParser:
     eval_answers.add_argument("--split", choices=["test", "train", "all"], default="test")
     eval_answers.add_argument("--limit", type=int, default=0)
     eval_answers.set_defaults(handler=cmd_eval_answers)
+
+    agent_run = commands.add_parser("agent-run", help="replay an issue through the triage graph")
+    agent_run.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    agent_run.add_argument("number", type=int)
+    agent_run.set_defaults(handler=cmd_agent_run)
+
+    agent_review = commands.add_parser("agent-review", help="approve, edit or reject a proposal")
+    agent_review.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    agent_review.add_argument("number", type=int)
+    verdict = agent_review.add_mutually_exclusive_group(required=True)
+    verdict.add_argument("--approve", action="store_true")
+    verdict.add_argument("--reject", action="store_true")
+    verdict.add_argument("--edit", metavar="TEXT", help="approve with this reply instead")
+    agent_review.add_argument("--reviewer", default="maintainer")
+    agent_review.set_defaults(handler=cmd_agent_review)
 
     eval_docs = commands.add_parser("eval-docs", help="compare chunkers on doc retrieval")
     eval_docs.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
