@@ -4,6 +4,9 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Slow or flaky networks: a dropped index fetch can surface as a fake resolution conflict.
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=10 \
     # CPU-only PyTorch: the default Linux wheel bundles CUDA (gigabytes).
     PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu \
     HF_HOME=/opt/models
