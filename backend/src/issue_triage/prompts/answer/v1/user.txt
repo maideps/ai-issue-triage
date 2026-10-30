@@ -1,0 +1,8 @@
+Documentation excerpts:
+
+$context
+
+Question issue:
+Title: $title
+
+$body

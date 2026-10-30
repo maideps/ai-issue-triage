@@ -32,6 +32,8 @@ from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urlli
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.reranker import CrossEncoderReranker
+from issue_triage.services.answer_eval import Judge, evaluate_answers
+from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.datasets import build_datasets, select_golden
 from issue_triage.services.docs_index import evaluate_doc_retrieval, index_docs, issue_query
 from issue_triage.services.duplicates import (
@@ -176,6 +178,42 @@ def cmd_eval_rerank(args: argparse.Namespace, settings: Settings) -> int:
             f"recall@{args.k}={r[f'recall_at_{args.k}']:.3f} mrr={r[f'mrr_at_{args.k}']:.3f} "
             f"p50={r['latency_ms_p50']}ms"
         )
+    print(f"written to {out}")
+    return 0
+
+
+def cmd_eval_answers(args: argparse.Namespace, settings: Settings) -> int:
+    cases = [
+        a
+        for a in read_cases(dataset_path(settings, args.repository, "answers"), AnswerCase)
+        if args.split == "all" or a.split == args.split
+    ]
+    if args.limit:
+        cases = cases[: args.limit]
+    embedder = make_embedder(settings)
+    llm = build_llm_client(settings)
+    drafter = AnswerDrafter(llm, DocRetriever(embedder, chunk_index(settings), args.repository))
+    summary = evaluate_answers(
+        cases,
+        drafter,
+        Judge(llm),
+        embedder,
+        llm.ledger,
+        docs_base_url=settings.docs_base_url,
+        on_progress=lambda n: print(f"{n}/{len(cases)} drafted", file=sys.stderr),
+    )
+    summary.update(repository=args.repository, split=args.split, prompt="answer@v1")
+    out = settings.evals_dir / "results" / f"answers-{args.split}.json"
+    write_json(out, summary)
+    print(f"{summary['drafted']}/{summary['n']} drafted")
+    for key in (
+        "faithfulness_lexical",
+        "answer_relevancy_cosine",
+        "reference_similarity_cosine",
+        "judge_score_mean",
+        "cited_page_matches_maintainer_link",
+    ):
+        print(f"  {key:36} {summary[key]}")
     print(f"written to {out}")
     return 0
 
@@ -334,6 +372,12 @@ def build_parser() -> argparse.ArgumentParser:
     eval_rerank.add_argument("--split", choices=["test", "train", "all"], default="all")
     eval_rerank.add_argument("--k", type=int, default=10)
     eval_rerank.set_defaults(handler=cmd_eval_rerank)
+
+    eval_answers = commands.add_parser("eval-answers", help="score drafted doc-grounded answers")
+    eval_answers.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    eval_answers.add_argument("--split", choices=["test", "train", "all"], default="test")
+    eval_answers.add_argument("--limit", type=int, default=0)
+    eval_answers.set_defaults(handler=cmd_eval_answers)
 
     eval_docs = commands.add_parser("eval-docs", help="compare chunkers on doc retrieval")
     eval_docs.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

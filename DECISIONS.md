@@ -142,3 +142,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: +6 points of recall@10 for about 4% more latency, with no model spend; a documented negative result instead of an assumed improvement.
 - Negative: rewriting adds one LLM call per issue once a real model replaces the fake.
+
+### D-010: Native, LLM-free answer metrics until a judge model is configured
+
+**Date:** 2026-10-30
+**Status:** accepted (revisit when an API key is added)
+**Context:** feat-011 planned RAGAS faithfulness and answer relevancy plus an LLM judge against the maintainer's real reply. RAGAS computes both metrics with an LLM (claim extraction, question generation), and no model key is configured (D-007); running RAGAS on the fake provider would produce meaningless numbers and pull in a large LangChain dependency tree.
+**Decision:** Compute RAGAS-style metrics natively and deterministically: lexical faithfulness (share of reply sentences whose content words mostly appear in the cited chunks), answer relevancy as embedding cosine between issue and reply, reference similarity as embedding cosine between reply and maintainer answer, citation validity (citations must point at retrieved chunks, otherwise the draft goes to a human), and, for answers whose maintainer reply linked docs, whether the draft cited the same page. The LLM judge is a real pipeline step (`judge@v1` via `LLMClient`); on the fake provider it scores word overlap and is labelled as such. Swapping the `answer` and `judge` steps to real models through `ISSUE_TRIAGE_LLM_MODELS` makes the judge meaningful without code changes.
+**Alternatives considered:**
+- The `ragas` library now — Rejected: needs an LLM to be meaningful, adds LangChain, and its numbers would be fake-provider artefacts.
+- No answer metrics until a key exists — Rejected: the grounding checks (citation validity, cited-page match) are objective today and catch the failure that matters most, unsupported answers.
+**Consequences:**
+- Positive: CI can run the answer evaluation on cached data with zero spend; the metrics are transparent and reproducible.
+- Negative: lexical faithfulness is a proxy (paraphrases score low); the README must not present fake-judge scores as quality.

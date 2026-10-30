@@ -99,6 +99,14 @@ node tools/py.mjs -m issue_triage eval-duplicates astral-sh/uv --split all
 | Hybrid + query rewriting (default, [D-009](DECISIONS.md#d-009-query-rewriting-on-cross-encoder-reranking-off-for-duplicate-search)) | 0.527 | 0.278 |
 | Hybrid + cross-encoder rerank | 0.455 | 0.223 |
 
+## Draft doc-grounded answers
+
+```bash
+node tools/py.mjs -m issue_triage eval-answers astral-sh/uv     # 370 test-split questions
+```
+
+Drafts cite the retrieved doc chunks they rely on; a citation to anything not retrieved, low confidence or no citation sends the draft to a human. Baseline with the fake drafter: citation validity 1.00, lexical faithfulness 0.71, reply-to-maintainer similarity 0.39, same docs page as the maintainer in 24% of linked cases ([D-010](DECISIONS.md#d-010-native-llm-free-answer-metrics-until-a-judge-model-is-configured), [results](evals/results/README.md)).
+
 ## Evaluate triage
 
 ```bash

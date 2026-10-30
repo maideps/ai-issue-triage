@@ -37,6 +37,21 @@ Same 319 pairs, on top of hybrid search. Rewriting uses the fake `query-keyphras
 
 File: [rerank-all.json](rerank-all.json). The general-purpose cross-encoder hurts: it was trained on web queries, not issue-to-issue similarity. Rewriting is on by default, reranking off.
 
+## Doc-grounded answers (feat-011, D-010)
+
+370 test-split questions with a maintainer reply. Retrieval: top 5 heading chunks. The drafter and the judge both run on the fake provider (`answer-extractive` quotes the top excerpt; `judge-overlap` scores word overlap), so this is the grounding baseline a real model has to beat.
+
+| Metric | Fake drafter |
+|---|---|
+| Citation validity (citations point at retrieved chunks) | 1.000 |
+| Lexical faithfulness (reply sentences supported by cited text) | 0.705 |
+| Answer relevancy (embedding cosine, issue vs reply) | 0.577 |
+| Reference similarity (embedding cosine, reply vs maintainer reply) | 0.393 |
+| Cited the page the maintainer linked (50 cases with a docs link) | 0.240 |
+| Judge score, 1-5 (fake: word overlap, not a quality judgment) | 1.65 |
+
+File: [answers-test.json](answers-test.json). Real-model run: map `answer` and `judge` in `ISSUE_TRIAGE_LLM_MODELS` and rerun `eval-answers`.
+
 ## Doc retrieval: chunking strategies (D-008)
 
 Ground truth: the uv docs pages linked in the first maintainer answer to a question. Docs at commit 21a92c1632 (last before the test split), `all-MiniLM-L6-v2` embeddings, pgvector HNSW.

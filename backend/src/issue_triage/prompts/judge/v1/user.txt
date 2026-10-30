@@ -1,0 +1,12 @@
+Question:
+$question
+
+Maintainer reply:
+<reference>
+$reference
+</reference>
+
+Drafted reply:
+<draft>
+$draft
+</draft>

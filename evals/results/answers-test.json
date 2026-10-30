@@ -1,0 +1,53 @@
+{
+  "task": "answers",
+  "created_at": "2026-10-30T16:28:20+00:00",
+  "models": [
+    "fake/answer-extractive"
+  ],
+  "n": 370,
+  "drafted": 370,
+  "failures": 0,
+  "faithfulness_lexical": 0.705,
+  "answer_relevancy_cosine": 0.5767,
+  "reference_similarity_cosine": 0.3932,
+  "judge_score_mean": 1.6486,
+  "judge_scored": 370,
+  "cited_page_matches_maintainer_link": 0.24,
+  "cases_with_maintainer_link": 50,
+  "citation_validity": 1.0,
+  "needs_human_rate": 0.0,
+  "llm": {
+    "total": {
+      "calls": 740,
+      "failed": 0,
+      "input_tokens": 915928,
+      "output_tokens": 46734,
+      "cost_usd": 0.0,
+      "latency_ms_p50": 0.6,
+      "latency_ms_p95": 3.6
+    },
+    "by_step": {
+      "answer": {
+        "calls": 370,
+        "failed": 0,
+        "input_tokens": 686295,
+        "output_tokens": 41554,
+        "cost_usd": 0.0,
+        "latency_ms_p50": 2.0,
+        "latency_ms_p95": 4.3
+      },
+      "judge": {
+        "calls": 370,
+        "failed": 0,
+        "input_tokens": 229633,
+        "output_tokens": 5180,
+        "cost_usd": 0.0,
+        "latency_ms_p50": 0.3,
+        "latency_ms_p95": 0.9
+      }
+    }
+  },
+  "repository": "astral-sh/uv",
+  "split": "test",
+  "prompt": "answer@v1"
+}

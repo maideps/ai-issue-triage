@@ -122,7 +122,52 @@ def query_keyphrases(messages: Sequence[Message], schema: dict[str, Any] | None)
     return json.dumps({"queries": queries[:3]})
 
 
+CONTEXT_BLOCK = re.compile(r"^\[([^\]\s]+#\d+)\] (.+?)(?=^\[[^\]\s]+#\d+\] |\Z)", re.M | re.S)
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+
+def answer_extractive(messages: Sequence[Message], schema: dict[str, Any] | None) -> str:
+    """Stand-in for answer drafting: quote the top excerpt and cite it."""
+    user = messages[-1].content if messages else ""
+    blocks = CONTEXT_BLOCK.findall(user)
+    if not blocks:
+        return json.dumps(
+            {
+                "reply": "The documentation excerpts do not cover this.",
+                "citations": [],
+                "confidence": 0.1,
+            }
+        )
+    ref, text = blocks[0]
+    lines = [line for line in text.strip().splitlines()[1:] if line.strip()]  # drop breadcrumb
+    excerpt = " ".join(SENTENCE_END.split(" ".join(lines))[:2]).strip()
+    reply = f"This is covered in the documentation: {excerpt} [{ref}]"
+    return json.dumps({"reply": reply, "citations": [ref], "confidence": 0.55})
+
+
+REFERENCE = re.compile(r"<reference>\s*(.*?)\s*</reference>", re.S)
+DRAFT = re.compile(r"<draft>\s*(.*?)\s*</draft>", re.S)
+JUDGE_WORD = re.compile(r"[a-z0-9][a-z0-9_.\-]{2,}")
+
+
+def judge_overlap(messages: Sequence[Message], schema: dict[str, Any] | None) -> str:
+    """Stand-in for the LLM judge: word overlap with the maintainer reply, scaled to 1-5.
+
+    It is not a judgment of substance; real scores need a real model (D-010).
+    """
+    user = messages[-1].content if messages else ""
+    reference = REFERENCE.search(user)
+    draft = DRAFT.search(user)
+    ref_words = set(JUDGE_WORD.findall((reference.group(1) if reference else "").lower()))
+    draft_words = set(JUDGE_WORD.findall((draft.group(1) if draft else "").lower()))
+    overlap = len(ref_words & draft_words) / (len(ref_words) or 1)
+    score = 1 + min(4, int(overlap * 8))
+    return json.dumps({"score": score, "reason": f"word overlap {overlap:.2f} (fake judge)"})
+
+
 DEFAULT_HANDLERS: dict[str, FakeHandler] = {
     "triage-keywords": triage_keywords,
     "query-keyphrases": query_keyphrases,
+    "answer-extractive": answer_extractive,
+    "judge-overlap": judge_overlap,
 }
