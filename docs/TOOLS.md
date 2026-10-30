@@ -34,3 +34,7 @@ Reusable capability packs are documented in `skills/` (one `SKILL.md` per skill 
 - Commit messages must follow the project convention: concise, descriptive, explaining WHY
 - One logical change per commit
 - Pre-commit verification via `make check` (or `npm run check`) is mandatory
+
+## The product's own MCP server (feat-019)
+
+`node tools/py.mjs -m issue_triage mcp` serves two read-only tools over stdio, backed by the local database and models (no network, no posting): `search_similar_issues(title, body, before?, exclude?, k)` and `search_docs(query, k)`. Register it in an MCP client, for example `claude mcp add ai-issue-triage -- node tools/py.mjs -m issue_triage mcp`.

@@ -15,6 +15,7 @@ from pathlib import Path
 import joblib
 from langgraph.checkpoint.memory import InMemorySaver
 
+from issue_triage.api.mcp_server import create_mcp_server
 from issue_triage.config import Settings, get_settings
 from issue_triage.domain.docs import CHUNKERS, Embedder
 from issue_triage.domain.evaluation import (
@@ -500,6 +501,23 @@ def cmd_demo_seed(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_mcp(args: argparse.Namespace, settings: Settings) -> int:
+    """Serve the search tools over MCP (stdio); logs go to stderr, never stdout."""
+    sessions = make_sessions(make_engine(settings.database_url))
+    issues = PostgresIssueRepository(sessions)
+    embedder = make_embedder(settings)
+    finder = SimilarIssueFinder(
+        args.repository,
+        embedder,
+        PostgresIssueVectorIndex(sessions),
+        Bm25IssueIndex(issues.list(args.repository)),
+    )
+    docs = DocRetriever(embedder, PostgresChunkRepository(sessions), args.repository, k=20)
+    server = create_mcp_server(args.repository, finder, issues, docs, settings.docs_base_url)
+    server.run("stdio")
+    return 0
+
+
 def cmd_eval_docs(args: argparse.Namespace, settings: Settings) -> int:
     answers = [
         a
@@ -689,6 +707,10 @@ def build_parser() -> argparse.ArgumentParser:
     demo_seed.add_argument("repository", nargs="?", default="astral-sh/uv")
     demo_seed.add_argument("--queue", type=int, default=8, help="golden issues to queue")
     demo_seed.set_defaults(handler=cmd_demo_seed)
+
+    mcp = commands.add_parser("mcp", help="serve the search tools over MCP (stdio)")
+    mcp.add_argument("repository", nargs="?", default="astral-sh/uv")
+    mcp.set_defaults(handler=cmd_mcp)
 
     eval_docs = commands.add_parser("eval-docs", help="compare chunkers on doc retrieval")
     eval_docs.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

@@ -147,6 +147,14 @@ In the UI, enter any uv issue number to replay it as of its creation date. The s
 node tools/py.mjs -m issue_triage eval-replay astral-sh/uv
 ```
 
+## Use the search tools from any agent (MCP)
+
+```bash
+claude mcp add ai-issue-triage -- node tools/py.mjs -m issue_triage mcp   # from the repository root
+```
+
+The MCP server exposes two read-only tools over stdio: `search_similar_issues` (hybrid search over earlier issues, with the same `before` as-of filter the agent uses) and `search_docs` (citable doc excerpts with page URLs). Asked "as of" 2026-02-04 about the macOS torch-reinstall bug (#17846), it returns #17791 and #17711, the issue maintainers linked, as the top two.
+
 ## Traces and KPIs
 
 Every agent run is traced per node and per model call (tokens, cost, latency, status), and `GET /api/kpis` combines live numbers (approval and edit rate, escalation to the LLM, cost per issue, latency p50/p95, errors) with the offline evaluation results; the UI shows them above the queue. Details: [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md#product-observability-feat-017). The first run after a restart pays the model loading (about 13 s in the triage node); later runs take about 1-2 s on CPU.
