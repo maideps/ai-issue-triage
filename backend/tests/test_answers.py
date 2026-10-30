@@ -174,6 +174,18 @@ def test_fake_answer_handler_quotes_and_cites_the_top_excerpt(retriever: DocRetr
     assert "UV_CACHE_DIR" in draft["reply"]
 
 
+def test_fake_answer_handler_skips_admonition_markers() -> None:
+    messages = load_prompt("answer", "v1").render(
+        context="[guides/x#1] Guide > Section\n\n!!! note\n\n    Use a token.",
+        title="t",
+        body="<issue>\nb\n</issue>",
+    )
+
+    reply = json.loads(answer_extractive(messages, None))["reply"]
+
+    assert "!!!" not in reply and "Use a token." in reply
+
+
 def test_fake_judge_scales_overlap() -> None:
     def grade(draft: str) -> int:
         messages = load_prompt("judge", "v1").render(

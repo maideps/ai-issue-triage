@@ -43,6 +43,9 @@ jobs:
           # CPU-only PyTorch for sentence-transformers; PyPI's default Linux wheel bundles CUDA.
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
 
+      - name: Install the frontend
+        run: npm run setup:frontend
+
       - name: Verify project
         run: npm run check
 

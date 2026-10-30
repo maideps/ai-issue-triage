@@ -28,3 +28,7 @@ __pycache__/
 
 # Raw GitHub data stays local (D-003); only small samples under evals/ are committed
 data/
+
+# Frontend build output
+frontend/dist/
+*.tsbuildinfo

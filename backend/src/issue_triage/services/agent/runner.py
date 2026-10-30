@@ -7,7 +7,16 @@ from typing import Any
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
-from issue_triage.services.agent.state import AgentState, Decision, Outcome, Proposal, Review
+from issue_triage.services.agent.state import (
+    AgentState,
+    Decision,
+    GuardOut,
+    Outcome,
+    Proposal,
+    RetrievalOut,
+    Review,
+    TriageOut,
+)
 
 
 @dataclass(frozen=True)
@@ -26,6 +35,9 @@ class RunStatus:
     decision: Decision | None
     proposal: Proposal | None
     outcome: Outcome | None
+    triage: TriageOut | None = None
+    retrieval: RetrievalOut | None = None
+    guard: GuardOut | None = None
 
     @property
     def awaiting_review(self) -> bool:
@@ -79,4 +91,9 @@ class TriageAgent:
             decision=Decision.model_validate(values["decision"]) if "decision" in values else None,
             proposal=Proposal.model_validate(values["proposal"]) if "proposal" in values else None,
             outcome=Outcome.model_validate(values["outcome"]) if "outcome" in values else None,
+            triage=TriageOut.model_validate(values["triage"]) if "triage" in values else None,
+            retrieval=RetrievalOut.model_validate(values["retrieval"])
+            if "retrieval" in values
+            else None,
+            guard=GuardOut.model_validate(values["guard"]) if "guard" in values else None,
         )

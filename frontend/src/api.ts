@@ -1,0 +1,88 @@
+// Typed client for the review API (backend/src/issue_triage/api/review.py).
+
+export type RunState = "pending" | "approved" | "rejected";
+export type Decision = "approve" | "edit" | "reject";
+
+export interface SimilarIssue {
+  number: number;
+  similarity: number;
+  title: string;
+}
+
+export interface Evidence {
+  decision: { action: string; reason: string } | null;
+  triage: { label: string; confidence: number; rationale: string } | null;
+  guard: { flagged: boolean; signals: string[]; redactions: Record<string, number> } | null;
+  similar: SimilarIssue[];
+}
+
+export interface Run {
+  repository: string;
+  number: number;
+  title: string;
+  status: RunState;
+  action: string;
+  confidence: number;
+  needs_attention: boolean;
+  proposal_text: string;
+  citations: string[];
+  evidence: Evidence;
+  final_text: string | null;
+  updated_at: string | null;
+}
+
+export interface Feedback {
+  decision: Decision;
+  original_text: string;
+  final_text: string | null;
+  reviewer: string;
+  created_at: string | null;
+}
+
+export interface RunDetail {
+  run: Run;
+  issue: { title: string; body: string; created_at: string; labels: string[] };
+  feedback: Feedback[];
+}
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail ?? detail;
+    } catch {
+      // keep the status text
+    }
+    throw new ApiError(response.status, detail);
+  }
+  return (await response.json()) as T;
+}
+
+const runPath = (repository: string, number: number) => `/api/runs/${repository}/${number}`;
+
+export const api = {
+  listRuns: (status?: RunState) =>
+    request<Run[]>(`/api/runs${status ? `?status=${status}` : ""}`),
+  getRun: (repository: string, number: number) =>
+    request<RunDetail>(runPath(repository, number)),
+  enqueue: (repository: string, number: number) =>
+    request<RunDetail>(runPath(repository, number), { method: "POST" }),
+  review: (repository: string, number: number, decision: Decision, text?: string, reviewer = "maintainer") =>
+    request<RunDetail>(`${runPath(repository, number)}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, text, reviewer }),
+    }),
+};

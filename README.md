@@ -116,6 +116,17 @@ node tools/py.mjs -m issue_triage agent-review astral-sh/uv 17846 --approve    #
 
 A LangGraph flow (guardrails → triage → similar issues → rule-based decision → draft → human gate) with a Postgres checkpointer: the run waits at the gate across restarts and resumes from its last completed node after a failure ([D-011](DECISIONS.md#d-011-one-langgraph-flow-rule-based-routing-a-human-gate-on-every-proposal)). Replaying #17846, it proposed a duplicate of #17791, the same macOS torch-reinstall bug; maintainers had linked #17711, so the review edited the reply.
 
+## Review suggestions in the UI
+
+```bash
+npm run setup:frontend                                   # once
+npm run dev:backend                                      # FastAPI on :8000 (loads models on first request)
+npm run dev:frontend                                     # React + Vite on :4173, proxies /api
+curl -X POST http://localhost:8000/api/runs/astral-sh/uv/16021   # replay an issue into the queue
+```
+
+The queue lists pending suggestions (attention first); a suggestion opens beside the original issue with its evidence: the rule that chose the action, the triage label, cited doc chunks and similar earlier issues. Approve, edit or reject resumes the agent and stores the reviewer's decision as feedback.
+
 ## Evaluate triage
 
 ```bash

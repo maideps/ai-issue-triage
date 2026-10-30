@@ -1,18 +1,22 @@
 """ORM tables. The schema is created and changed only through Alembic migrations."""
 
 from datetime import datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # Must match the embedding model's output size (all-MiniLM-L6-v2: 384); see D-008.
@@ -111,3 +115,41 @@ class IssueEmbeddingRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     issue_id: Mapped[int] = mapped_column(ForeignKey("issues.id", ondelete="CASCADE"), unique=True)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+
+class TriageRunRow(Base):
+    __tablename__ = "triage_runs"
+    __table_args__ = (
+        UniqueConstraint("repository", "number", name="uq_triage_runs_repository_number"),
+        Index("ix_triage_runs_status_updated", "status", "updated_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    repository: Mapped[str] = mapped_column(String(200))
+    number: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16))
+    action: Mapped[str] = mapped_column(String(16))
+    confidence: Mapped[float] = mapped_column(Float)
+    needs_attention: Mapped[bool] = mapped_column(Boolean)
+    proposal_text: Mapped[str] = mapped_column(Text)
+    citations: Mapped[list[str]] = mapped_column(ARRAY(String(300)))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    final_text: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ReviewFeedbackRow(Base):
+    __tablename__ = "review_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("triage_runs.id", ondelete="CASCADE"), index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16))
+    original_text: Mapped[str] = mapped_column(Text)
+    final_text: Mapped[str | None] = mapped_column(Text)
+    reviewer: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

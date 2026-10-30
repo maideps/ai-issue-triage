@@ -22,9 +22,9 @@
   "scripts": {
     "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run e2e && npm run verify-all",
     "lint": "node scripts/framework-check.mjs lint && node tools/py.mjs -m ruff check . && node tools/py.mjs -m ruff format --check .",
-    "typecheck": "node scripts/framework-check.mjs typecheck && node tools/py.mjs -m mypy",
-    "test": "node scripts/framework-check.mjs test && node tools/py.mjs -m pytest -q",
-    "build": "node scripts/framework-check.mjs build && node tools/py.mjs -m compileall -q src",
+    "typecheck": "node scripts/framework-check.mjs typecheck && node tools/py.mjs -m mypy && npm --prefix frontend run typecheck",
+    "test": "node scripts/framework-check.mjs test && node tools/py.mjs -m pytest -q && npm --prefix frontend run test",
+    "build": "node scripts/framework-check.mjs build && node tools/py.mjs -m compileall -q src && npm --prefix frontend run build",
     "e2e": "node scripts/framework-check.mjs e2e",
     "dev": "node scripts/framework-check.mjs dev",
     "check-arch": "node scripts/framework-check.mjs check-arch",
@@ -56,7 +56,9 @@
     "help": "node scripts/framework-check.mjs help",
     "prepublishOnly": "npm run check && npm run check-arch",
     "setup:backend": "node tools/py.mjs setup",
-    "dev:backend": "node tools/py.mjs -m uvicorn issue_triage.main:app --reload --port 8000"
+    "dev:backend": "node tools/py.mjs -m uvicorn issue_triage.main:app --reload --port 8000",
+    "setup:frontend": "npm --prefix frontend ci --no-audit --no-fund",
+    "dev:frontend": "npm --prefix frontend run dev"
   },
   "bin": {
     "create-harness": "scripts/create-harness.mjs",

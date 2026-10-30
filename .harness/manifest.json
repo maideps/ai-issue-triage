@@ -170,6 +170,7 @@
     "evals/",
     "tools/",
     "docker-compose.yml",
+    "frontend/",
     ".github/workflows/publish.yml",
     "repo-completion-plan.md"
   ],

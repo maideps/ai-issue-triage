@@ -139,7 +139,12 @@ def answer_extractive(messages: Sequence[Message], schema: dict[str, Any] | None
             }
         )
     ref, text = blocks[0]
-    lines = [line for line in text.strip().splitlines()[1:] if line.strip()]  # drop breadcrumb
+    # Drop the breadcrumb line and MkDocs admonition markers ("!!! note", "??? tip").
+    lines = [
+        line
+        for line in text.strip().splitlines()[1:]
+        if line.strip() and not line.lstrip().startswith(("!!!", "???"))
+    ]
     excerpt = " ".join(SENTENCE_END.split(" ".join(lines))[:2]).strip()
     reply = f"This is covered in the documentation: {excerpt} [{ref}]"
     return json.dumps({"reply": reply, "citations": [ref], "confidence": 0.55})

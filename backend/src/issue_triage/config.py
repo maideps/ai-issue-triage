@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     # Raw GitHub data stays here, outside git (D-003).
     data_dir: Path = REPO_ROOT / "data"
+    # The repository the review queue serves.
+    repository: str = "astral-sh/uv"
     # Local embedding model (D-007); its size must match EMBEDDING_DIM in the migrations.
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_dim: int = 384

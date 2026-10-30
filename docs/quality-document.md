@@ -8,8 +8,8 @@ Rate each module on a scale of A (excellent) / B (good) / C (acceptable) / D (ne
 |---|---|---|---|---|---|
 | harness scaffold | B | n/a | B | B | n/a |
 | backend/scripts (target analysis) | D | C | B | n/a | n/a |
-| backend service (skeleton) | B | A | B | A | n/a |
-| frontend | not started | not started | not started | not started | not started |
+| backend service | B | A | B | A | B |
+| frontend (review UI) | B | A | C | B | n/a |
 
 ## Summary
 

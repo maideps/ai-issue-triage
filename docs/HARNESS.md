@@ -41,3 +41,5 @@
 | — | `npm run prepublishOnly` |
 | — | `npm run setup:backend` |
 | — | `npm run dev:backend` |
+| — | `npm run setup:frontend` |
+| — | `npm run dev:frontend` |

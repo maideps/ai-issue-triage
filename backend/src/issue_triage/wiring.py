@@ -1,26 +1,32 @@
 """Composition root helpers shared by the CLI and the HTTP app."""
 
 from collections.abc import Mapping
+from contextlib import ExitStack
+from threading import Lock
 
 import joblib
 
 from issue_triage.config import Settings
+from issue_triage.infrastructure.checkpointer import postgres_checkpointer
 from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions
 from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorIndex
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
+from issue_triage.infrastructure.db.runs import PostgresRunStore
 from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.llm.fake import FakeHandler, FakeLLMProvider
 from issue_triage.infrastructure.llm.fake_handlers import DEFAULT_HANDLERS
 from issue_triage.infrastructure.llm.litellm_provider import LiteLLMProvider, RoutingProvider
-from issue_triage.services.agent.graph import AgentDeps, Classifier
+from issue_triage.services.agent.graph import AgentDeps, Classifier, build_graph
+from issue_triage.services.agent.runner import TriageAgent
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.decision_model import EscalatingTriager
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.duplicates import SimilarIssueFinder
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
 from issue_triage.services.query_rewrite import QueryRewriter
+from issue_triage.services.review_queue import ReviewQueue
 from issue_triage.services.triage import Triager
 
 
@@ -64,3 +70,30 @@ def build_agent_deps(settings: Settings, repository: str) -> AgentDeps:
         embed=embedder.embed,
         candidate_text=texts.get,
     )
+
+
+class LazyReviewQueue:
+    """Builds the real review queue on first call and keeps its checkpointer open."""
+
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+        self._stack = ExitStack()
+        self._queue: ReviewQueue | None = None
+        self._lock = Lock()
+
+    def __call__(self) -> ReviewQueue:
+        with self._lock:
+            if self._queue is None:
+                settings = self._settings
+                saver = self._stack.enter_context(postgres_checkpointer(settings.database_url))
+                deps = build_agent_deps(settings, settings.repository)
+                sessions = make_sessions(make_engine(settings.database_url))
+                self._queue = ReviewQueue(
+                    TriageAgent(build_graph(deps, saver)),
+                    PostgresRunStore(sessions),
+                    PostgresIssueRepository(sessions),
+                )
+            return self._queue
+
+    def close(self) -> None:
+        self._stack.close()
