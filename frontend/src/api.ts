@@ -39,10 +39,30 @@ export interface Feedback {
   created_at: string | null;
 }
 
+export interface MaintainerOutcome {
+  state: string;
+  state_reason: string | null;
+  closed_at: string | null;
+  labels: string[];
+  type_label: string | null;
+  duplicate_of: number | null;
+  needs_info: boolean;
+  first_reply: string | null;
+}
+
+export interface Agreement {
+  expected_action: string | null;
+  action_matches: boolean | null;
+  duplicate_target_matches: boolean | null;
+  type_matches: boolean | null;
+}
+
 export interface RunDetail {
   run: Run;
   issue: { title: string; body: string; created_at: string; labels: string[] };
   feedback: Feedback[];
+  maintainer: MaintainerOutcome;
+  agreement: Agreement;
 }
 
 export class ApiError extends Error {

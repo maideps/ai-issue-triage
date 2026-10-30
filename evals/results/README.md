@@ -12,6 +12,19 @@ Metric summaries only (no issue text, D-003). Each file records the prompt versi
 
 Per class F1 for the keyword baseline: bug 0.68 (619 issues), enhancement 0.64 (457), question 0.47 (426), other 0.32 (41).
 
+## End-to-end replay (feat-015, D-013)
+
+The whole agent on 100 test-split issues (25 duplicates, 25 needs-info, 25 answered questions, 25 other types), compared with what maintainers did.
+
+| Maintainer action | Agent chose the same action | n |
+|---|---|---|
+| Closed as duplicate | 0.276 (right target: 0.103) | 29 |
+| Answered a question | 0.261 | 23 |
+| Asked for a reproducible example | 0.042 | 24 |
+| All with a known action | 0.197 | 76 |
+
+Type agreement 0.651 (n=83). The agent chose summary for 67 of 100 issues. File: [replay-test.json](replay-test.json). The components are stronger than the system: the rule-based `decide` step needs calibration on the train split.
+
 ## Decision model for type triage (feat-013, D-012)
 
 Logistic regression on issue embeddings, trained on the oldest 85% of the train split (4,351), threshold chosen on the newest 15% (768), reported on the test split (1,543).

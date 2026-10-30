@@ -127,6 +127,14 @@ curl -X POST http://localhost:8000/api/runs/astral-sh/uv/16021   # replay an iss
 
 The queue lists pending suggestions (attention first); a suggestion opens beside the original issue with its evidence: the rule that chose the action, the triage label, cited doc chunks and similar earlier issues. Approve, edit or reject resumes the agent and stores the reviewer's decision as feedback.
 
+## Replay mode
+
+In the UI, enter any uv issue number to replay it as of its creation date. The suggestion appears beside what maintainers actually did (type, duplicate link, request for a reproduction, first reply) with per-aspect agreement. Across 100 replayed test issues the agent matched the maintainers' action 20% of the time while matching their type label 65% of the time: the rule-based decision step is the bottleneck, not the components ([D-013](DECISIONS.md#d-013-replay-mode-compares-with-maintainers-the-decision-rules-need-calibration)).
+
+```bash
+node tools/py.mjs -m issue_triage eval-replay astral-sh/uv
+```
+
 ## Evaluate triage
 
 ```bash

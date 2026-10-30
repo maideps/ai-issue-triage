@@ -10,6 +10,15 @@ interface Props {
 const issueUrl = (repository: string, number: number) =>
   `https://github.com/${repository}/issues/${number}`;
 
+function Verdict({ label, value }: { label: string; value: boolean | null }) {
+  if (value === null) return null;
+  return (
+    <span className={value ? "badge agree" : "badge disagree"}>
+      {label}: {value ? "matches" : "differs"}
+    </span>
+  );
+}
+
 export function RunDetail({ repository, number, onReviewed }: Props) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [draft, setDraft] = useState("");
@@ -36,7 +45,7 @@ export function RunDetail({ repository, number, onReviewed }: Props) {
   if (error) return <p role="alert">Could not load #{number}: {error}</p>;
   if (!detail) return <p className="muted">Loading #{number}…</p>;
 
-  const { run, issue, feedback } = detail;
+  const { run, issue, feedback, maintainer, agreement } = detail;
   const edited = draft.trim() !== run.proposal_text.trim();
   const pending = run.status === "pending";
 
@@ -65,6 +74,39 @@ export function RunDetail({ repository, number, onReviewed }: Props) {
           {issue.labels.length ? `maintainers labelled it: ${issue.labels.join(", ")}` : "no labels"}
         </p>
         <pre className="body">{issue.body || "(empty body)"}</pre>
+
+        <section className="maintainers" aria-label="What maintainers did">
+          <h3>What maintainers did</h3>
+          <p className="muted">Shown for comparison only; the agent never sees it.</p>
+          <ul>
+            <li>
+              {maintainer.state.toLowerCase()}
+              {maintainer.state_reason ? ` (${maintainer.state_reason.toLowerCase()})` : ""}
+              {maintainer.closed_at ? ` on ${new Date(maintainer.closed_at).toLocaleDateString()}` : ""}
+            </li>
+            <li>Type: {maintainer.type_label ?? "no type label"}</li>
+            {maintainer.duplicate_of !== null && (
+              <li>
+                Duplicate of{" "}
+                <a href={issueUrl(repository, maintainer.duplicate_of)} target="_blank" rel="noreferrer">
+                  #{maintainer.duplicate_of}
+                </a>
+              </li>
+            )}
+            {maintainer.needs_info && <li>Asked for a reproducible example</li>}
+          </ul>
+          {maintainer.first_reply && (
+            <>
+              <h4>First maintainer reply</h4>
+              <pre className="body reply">{maintainer.first_reply}</pre>
+            </>
+          )}
+          <div className="agreement">
+            <Verdict label="Action" value={agreement.action_matches} />
+            <Verdict label="Duplicate target" value={agreement.duplicate_target_matches} />
+            <Verdict label="Type" value={agreement.type_matches} />
+          </div>
+        </section>
       </section>
 
       <section className="proposal">

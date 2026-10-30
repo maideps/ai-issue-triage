@@ -29,6 +29,17 @@ const detail = (r: Run, feedback: RunDetail["feedback"] = []): RunDetail => ({
   run: r,
   issue: { title: r.title, body: "How do I move the cache?", created_at: "2025-09-20T10:00:00Z", labels: ["question"] },
   feedback,
+  maintainer: {
+    state: "CLOSED",
+    state_reason: "COMPLETED",
+    closed_at: "2025-09-22T10:00:00Z",
+    labels: ["question"],
+    type_label: "question",
+    duplicate_of: null,
+    needs_info: false,
+    first_reply: "Set UV_CACHE_DIR to move it.",
+  },
+  agreement: { expected_action: "answer", action_matches: true, duplicate_target_matches: null, type_matches: true },
 });
 
 type Handler = (url: string, init?: RequestInit) => unknown;
@@ -154,5 +165,35 @@ describe("run detail and review actions", () => {
     );
 
     expect(screen.getByRole("note")).toHaveTextContent("Needs attention");
+  });
+});
+
+describe("replay mode", () => {
+  it("shows what maintainers did beside the suggestion", async () => {
+    mockApi((url) => (url.endsWith("/api/runs/astral-sh/uv/1") ? detail(run(1)) : [run(1)]));
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: /#1 Issue 1/ }));
+
+    const panel = await screen.findByRole("region", { name: "What maintainers did" });
+    expect(within(panel).getByText("Set UV_CACHE_DIR to move it.")).toBeInTheDocument();
+    expect(within(panel).getByText("Action: matches")).toBeInTheDocument();
+    expect(within(panel).getByText("Type: matches")).toBeInTheDocument();
+    expect(within(panel).queryByText(/Duplicate target/)).not.toBeInTheDocument();
+  });
+
+  it("replays an issue by number and opens it", async () => {
+    const calls = mockApi((url, init) => {
+      if (init?.method === "POST") return detail(run(42));
+      if (url.endsWith("/api/runs/astral-sh/uv/42")) return detail(run(42));
+      return [];
+    });
+    render(<App />);
+
+    await userEvent.type(screen.getByLabelText(/Replay a astral-sh\/uv issue/), "42");
+    await userEvent.click(screen.getByRole("button", { name: "Replay" }));
+
+    expect(await screen.findByRole("heading", { name: /#42 Issue 42/ })).toBeInTheDocument();
+    const post = calls.find((c) => c.init?.method === "POST")!;
+    expect(post.url).toBe("/api/runs/astral-sh/uv/42");
   });
 });

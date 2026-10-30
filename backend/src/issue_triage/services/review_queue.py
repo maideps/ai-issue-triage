@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from issue_triage.domain.issues import Issue
+from issue_triage.domain.replay import MaintainerOutcome, agreement, maintainer_outcome
 from issue_triage.domain.reviews import (
     FeedbackRecord,
     ReviewDecision,
@@ -50,6 +51,8 @@ class RunDetail:
     issue_body: str
     issue_created_at: datetime
     issue_labels: tuple[str, ...]
+    maintainer: MaintainerOutcome
+    agreement: dict[str, Any]
     feedback: Sequence[FeedbackRecord]
 
 
@@ -126,12 +129,20 @@ class ReviewQueue:
         if run is None:
             raise NotFound(f"no triage run for {repository}#{number}")
         issue = self._issue(repository, number)
+        outcome = maintainer_outcome(issue)  # display only: never fed to the agent
         return RunDetail(
             run=run,
             issue_title=issue.title,
             issue_body=issue.body,
             issue_created_at=issue.created_at,
             issue_labels=issue.labels,
+            maintainer=outcome,
+            agreement=agreement(
+                outcome,
+                run.action,
+                run.citations,
+                (run.evidence.get("triage") or {}).get("label"),
+            ),
             feedback=self._runs.feedback(repository, number),
         )
 

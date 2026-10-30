@@ -5,6 +5,7 @@ Composition root (like ``main.py``): wires infrastructure into the use cases.
 
 import argparse
 import json
+import random
 import subprocess
 import sys
 import time
@@ -13,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 import joblib
+from langgraph.checkpoint.memory import InMemorySaver
 
 from issue_triage.config import Settings, get_settings
 from issue_triage.domain.docs import CHUNKERS, Embedder
@@ -20,6 +22,7 @@ from issue_triage.domain.evaluation import (
     TYPE_CLASSES,
     AnswerCase,
     DuplicateCase,
+    NeedsInfoCase,
     TypeCase,
     build_doc_link_cases,
 )
@@ -56,6 +59,7 @@ from issue_triage.services.eval_runner import run_type_eval
 from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
 from issue_triage.services.query_rewrite import QUERY_REWRITE_STEP, QueryRewriter
+from issue_triage.services.replay_eval import evaluate_replay
 from issue_triage.services.triage import Triager
 from issue_triage.wiring import build_agent_deps, build_llm_client
 
@@ -309,6 +313,52 @@ def cmd_eval_decision(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_eval_replay(args: argparse.Namespace, settings: Settings) -> int:
+    """Replay a stratified test-split sample through the whole agent (in memory)."""
+    repository = issue_repository(settings)
+    duplicates = [
+        c.number
+        for c in read_cases(dataset_path(settings, args.repository, "duplicates"), DuplicateCase)
+        if c.split == "test"
+    ]
+    needs = [
+        c.number
+        for c in read_cases(dataset_path(settings, args.repository, "needs_info"), NeedsInfoCase)
+        if c.split == "test" and c.needs_info
+    ]
+    answers = [
+        c.number
+        for c in read_cases(dataset_path(settings, args.repository, "answers"), AnswerCase)
+        if c.split == "test"
+    ]
+    others = [
+        c.number
+        for c in read_cases(dataset_path(settings, args.repository, "type"), TypeCase)
+        if c.split == "test" and c.label in ("bug", "enhancement", "other")
+    ]
+    rng = random.Random(7)
+    chosen: list[int] = []
+    for pool, quota in (
+        (duplicates, args.per_group),
+        (needs, args.per_group),
+        (answers, args.per_group),
+        (others, args.per_group),
+    ):
+        candidates = sorted(set(pool) - set(chosen))
+        chosen += rng.sample(candidates, min(quota, len(candidates)))
+    issues = [i for n in sorted(chosen) if (i := repository.get(args.repository, n))]
+    agent = TriageAgent(build_graph(build_agent_deps(settings, args.repository), InMemorySaver()))
+    summary = evaluate_replay(
+        issues, agent, on_progress=lambda n: print(f"{n}/{len(issues)} replayed", file=sys.stderr)
+    )
+    summary.update(repository=args.repository, split="test", sample_seed=7)
+    out = settings.evals_dir / "results" / "replay-test.json"
+    write_json(out, summary)
+    print(json.dumps({k: summary[k] for k in ("n", "actions", "action_agreement")}, indent=2))
+    print(f"written to {out}")
+    return 0
+
+
 def print_status(status: RunStatus) -> None:
     print(f"{status.thread_id}: next={list(status.next_nodes) or 'done'}")
     if status.decision:
@@ -520,6 +570,11 @@ def build_parser() -> argparse.ArgumentParser:
     eval_decision = commands.add_parser("eval-decision", help="classifier vs LLM type triage")
     eval_decision.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
     eval_decision.set_defaults(handler=cmd_eval_decision)
+
+    eval_replay = commands.add_parser("eval-replay", help="replay test issues end to end")
+    eval_replay.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    eval_replay.add_argument("--per-group", type=int, default=25)
+    eval_replay.set_defaults(handler=cmd_eval_replay)
 
     agent_run = commands.add_parser("agent-run", help="replay an issue through the triage graph")
     agent_run.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

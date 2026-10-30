@@ -39,6 +39,8 @@ class RunDetailOut(BaseModel):
     run: RunOut
     issue: dict[str, Any]
     feedback: list[FeedbackOut]
+    maintainer: dict[str, Any]
+    agreement: dict[str, Any]
 
 
 class ReviewIn(BaseModel):
@@ -83,6 +85,19 @@ def _detail(detail: RunDetail) -> RunDetailOut:
             )
             for f in detail.feedback
         ],
+        maintainer={
+            "state": detail.maintainer.state,
+            "state_reason": detail.maintainer.state_reason,
+            "closed_at": detail.maintainer.closed_at.isoformat()
+            if detail.maintainer.closed_at
+            else None,
+            "labels": list(detail.maintainer.labels),
+            "type_label": detail.maintainer.type_label,
+            "duplicate_of": detail.maintainer.duplicate_of,
+            "needs_info": detail.maintainer.needs_info,
+            "first_reply": detail.maintainer.first_reply,
+        },
+        agreement=detail.agreement,
     )
 
 

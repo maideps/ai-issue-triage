@@ -182,3 +182,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: two thirds of triage calls never reach an LLM; the decision is traceable (confidence and source per issue).
 - Negative: the threshold was tuned against the keyword fake; a stronger real model will likely move it higher.
+
+### D-013: Replay mode compares with maintainers; the decision rules need calibration
+
+**Date:** 2026-10-30
+**Status:** accepted (follow-up open: calibrate `decide` on the train split)
+**Context:** feat-015 shows each suggestion beside what maintainers did: final type label, duplicate link, needs-info label and first maintainer reply. That information is from after `as_of`, so it is displayed and compared but never passed to the agent (D-004). `eval-replay` ran the whole agent on 100 test-split issues (25 each: duplicates, needs-info, answered questions, other types; seed 7).
+**Decision:** Ship replay mode with per-aspect agreement (action, duplicate target, type) and publish the end-to-end baseline as is: action agreement 0.197 over 76 issues with a known maintainer action; by maintainer action, duplicate 0.276 (n=29, correct target 0.103), answer 0.261 (n=23), needs-info 0.042 (n=24); type agreement 0.651 (n=83). The agent chose summary for 67 of 100 issues.
+**Alternatives considered:**
+- Tuning the rules on these 100 test issues — Rejected: it would leak the test split.
+- Hiding the end-to-end number behind the stronger per-component metrics — Rejected: the gap between components and the system is the most useful finding so far.
+**Consequences:**
+- Positive: the system-level weak spot is located precisely: `decide`'s needs-info rule (version or code present means "has info") is far stricter than maintainers, the 0.8 duplicate threshold is conservative, and summary absorbs everything else.
+- Negative: until calibrated on the train split, end-to-end action agreement is low; per-component metrics overstate the system.
