@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, type Run } from "./api";
+import { KpiBar } from "./components/KpiBar";
 import { QueueList, runKey } from "./components/QueueList";
 import { RunDetail } from "./components/RunDetail";
 
@@ -48,6 +49,7 @@ export function App() {
           {replayState && <span role="status">{replayState}</span>}
         </form>
       </header>
+      <KpiBar refreshKey={refreshKey} />
       <main>
         <QueueList
           selected={selected ? runKey(selected) : null}

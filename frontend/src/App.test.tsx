@@ -197,3 +197,30 @@ describe("replay mode", () => {
     expect(post.url).toBe("/api/runs/astral-sh/uv/42");
   });
 });
+
+describe("key metrics", () => {
+  it("shows live and offline KPIs, with a dash for anything not measured", async () => {
+    mockApi((url) =>
+      url === "/api/kpis"
+        ? {
+            live: {
+              runs: 4, pending: 1, approved: 2, rejected: 1, approval_rate: 0.6667, edit_rate: 0.5,
+              escalation_rate: 0.34, traced_runs: 3, llm_calls: 1, cost_per_issue_usd: null,
+              latency_ms_p50: 812, latency_ms_p95: 2400, errors: 0,
+            },
+            offline: {
+              triage_macro_f1: 0.592, triage_escalation_rate: 0.342, duplicate_recall_at_10: 0.527,
+              answer_faithfulness: 0.705, answer_citation_validity: 1, replay_action_agreement: null,
+            },
+          }
+        : [],
+    );
+    render(<App />);
+
+    const bar = await screen.findByRole("region", { name: "Key metrics" });
+    expect(within(bar).getByText("67%")).toBeInTheDocument();
+    expect(within(bar).getByText("812 ms / 2400 ms")).toBeInTheDocument();
+    expect(within(bar).getByText("0.59")).toBeInTheDocument();
+    expect(within(bar).getAllByText("—")).toHaveLength(2);
+  });
+});

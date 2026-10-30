@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from issue_triage.domain.reviews import FeedbackRecord, ReviewDecision, RunRecord, RunState
@@ -84,6 +84,9 @@ class PostgresRunStore:
                 )
             )
 
+    def decision_counts(self) -> dict[str, int]:
+        return _decision_counts(self._sessions)
+
     def feedback(self, repository: str, number: int) -> Sequence[FeedbackRecord]:
         query = (
             select(ReviewFeedbackRow)
@@ -104,3 +107,11 @@ class PostgresRunStore:
                 )
                 for row in session.scalars(query)
             ]
+
+
+def _decision_counts(sessions: sessionmaker[Session]) -> dict[str, int]:
+    with sessions() as session:
+        rows = session.execute(
+            select(ReviewFeedbackRow.decision, func.count()).group_by(ReviewFeedbackRow.decision)
+        ).all()
+    return {str(decision): int(count) for decision, count in rows}

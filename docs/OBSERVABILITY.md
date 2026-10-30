@@ -53,3 +53,22 @@ make sweep         # or: npm run sweep [-- --older-than N]
 ```
 
 The sweep (default threshold: 30 days) archives old session traces to `.harness/traces/archive/`, prunes orphaned `.tmp` files from interrupted merges and stale open session records, and reports structural drift against the manifest (report-only). It never touches instance state — feature list, docs, and decisions are never modified by a sweep.
+
+## Product observability (feat-017)
+
+The harness sections above trace development sessions. The product traces itself:
+
+**Traces.** Every agent run is a trace keyed `owner/name#number`. `Tracer` (`services/tracing.py`) records one span per graph node (`guard`, `triage`, `retrieve`, `decide`, `draft_*`, `human_gate`, `finalize`) with duration and status (`ok`, `error`, or `interrupted` when the run pauses at the human gate), and one span per model call with step, model, tokens, cost and latency, attached to the node that made it through a context variable. Spans are stored in `trace_spans` (migration `0005`) and served at `GET /api/traces/{owner}/{name}/{number}`. Model calls outside an agent run (evaluations) stay in the `CallLedger` summaries written by each evaluation command.
+
+**KPIs** (`GET /api/kpis`, shown as a strip above the review queue):
+
+| KPI | Source | What it tells you |
+|---|---|---|
+| Pending / approval rate / edit rate | `triage_runs`, `review_feedback` | How much reviewers accept as is, edit or reject |
+| Escalation rate | traces: runs whose triage node made an LLM call | How often the trained classifier was unsure (D-012) |
+| Cost per issue | traces: LLM span cost per run | Spend per triaged issue (0 on the fake provider) |
+| Latency p50 / p95 | traces: node durations per run, human gate excluded | Agent time a maintainer waits for |
+| Errors | traces: spans with status `error` | Failed nodes or model calls |
+| Triage macro-F1, duplicate recall@10, answer faithfulness, replay agreement | committed `evals/results/*.json` | The offline quality the live numbers should be read against |
+
+Missing measurements are reported as `null` (a dash in the UI), never as zero.

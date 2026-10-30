@@ -39,6 +39,7 @@ from issue_triage.services.agent.state import (
 from issue_triage.services.answers import DraftResult, chunk_id
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.guardrails import guard_input
+from issue_triage.services.tracing import Tracer
 from issue_triage.services.triage import TriageDecision
 
 VERSION = re.compile(r"\b\d+\.\d+(?:\.\d+)?\b")
@@ -79,6 +80,7 @@ class AgentDeps:
     candidate_text: Callable[[int], str | None]
     duplicate_threshold: float = 0.8
     similar_k: int = 5
+    tracer: Tracer | None = None
 
 
 Node = Callable[[Mapping[str, Any]], dict[str, Any]]
@@ -92,8 +94,14 @@ class NodeSpec:
     run: Node
 
 
-def scoped(spec: NodeSpec) -> Callable[[AgentState], dict[str, Any]]:
+def scoped(spec: NodeSpec, tracer: Tracer | None = None) -> Callable[[AgentState], dict[str, Any]]:
     def node(state: AgentState) -> dict[str, Any]:
+        if tracer is not None and "repository" in state and "number" in state:
+            with tracer.node(f"{state['repository']}#{state['number']}", spec.name):
+                return run(state)
+        return run(state)
+
+    def run(state: AgentState) -> dict[str, Any]:
         view = {key: state[key] for key in spec.reads if key in state}  # type: ignore[literal-required]
         update = spec.run(view)
         extra = set(update) - set(spec.writes)
@@ -269,7 +277,7 @@ def build_graph(
 ) -> CompiledStateGraph[AgentState, None, AgentState, AgentState]:
     graph: StateGraph[AgentState, None, AgentState, AgentState] = StateGraph(AgentState)
     for spec in build_nodes(deps):
-        graph.add_node(spec.name, scoped(spec))  # type: ignore[call-overload]
+        graph.add_node(spec.name, scoped(spec, deps.tracer))  # type: ignore[call-overload]
     graph.add_edge(START, "guard")
     graph.add_edge("guard", "triage")
     graph.add_edge("triage", "retrieve")

@@ -16,6 +16,7 @@ from issue_triage.infrastructure.db.engine import make_engine, make_sessions
 from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorIndex
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
 from issue_triage.infrastructure.db.runs import PostgresRunStore
+from issue_triage.infrastructure.db.traces import PostgresTraceStore
 from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
 from issue_triage.infrastructure.github_rest import GitHubRest, issue_from_payload
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
@@ -28,10 +29,12 @@ from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.decision_model import EscalatingTriager
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.duplicates import SimilarIssueFinder
+from issue_triage.services.kpis import KpiService
 from issue_triage.services.live import LiveIntake
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
 from issue_triage.services.query_rewrite import QueryRewriter
 from issue_triage.services.review_queue import ReviewQueue
+from issue_triage.services.tracing import Tracer
 from issue_triage.services.triage import Triager
 
 
@@ -65,13 +68,17 @@ def build_llm_client(
     return LLMClient(provider, router, ledger)
 
 
-def build_agent_deps(settings: Settings, repository: str) -> AgentDeps:
+def build_agent_deps(
+    settings: Settings, repository: str, tracer: Tracer | None = None
+) -> AgentDeps:
     """Everything the triage graph needs, on the configured models and databases."""
     sessions = make_sessions(make_engine(settings.database_url))
     issues = PostgresIssueRepository(sessions).list(repository)
     texts = {i.number: issue_query(i.title, i.body) for i in issues}
     embedder = SentenceTransformerEmbedder(settings.embedding_model, settings.embedding_dim)
     llm = build_llm_client(settings)
+    if tracer is not None:
+        llm.on_call = tracer.llm_call  # model calls attach to the node that made them
     finder = SimilarIssueFinder(
         repository,
         embedder,
@@ -93,6 +100,7 @@ def build_agent_deps(settings: Settings, repository: str) -> AgentDeps:
         drafter=drafter,
         embed=embedder.embed,
         candidate_text=texts.get,
+        tracer=tracer,
     )
 
 
@@ -104,6 +112,7 @@ class LazyReviewQueue:
         self._stack = ExitStack()
         self._queue: ReviewQueue | None = None
         self._live: LiveIntake | None = None
+        self._kpis: KpiService | None = None
         self._lock = Lock()
 
     def __call__(self) -> ReviewQueue:
@@ -111,13 +120,17 @@ class LazyReviewQueue:
             if self._queue is None:
                 settings = self._settings
                 saver = self._stack.enter_context(postgres_checkpointer(settings.database_url))
-                deps = build_agent_deps(settings, settings.repository)
                 sessions = make_sessions(make_engine(settings.database_url))
+                traces = PostgresTraceStore(sessions)
+                deps = build_agent_deps(settings, settings.repository, Tracer(traces))
                 self._queue = ReviewQueue(
                     TriageAgent(build_graph(deps, saver)),
                     PostgresRunStore(sessions),
                     PostgresIssueRepository(sessions),
                     build_publisher(settings),
+                )
+                self._kpis = KpiService(
+                    PostgresRunStore(sessions), traces, settings.evals_dir / "results"
                 )
                 self._live = LiveIntake(
                     self._queue,
@@ -132,6 +145,11 @@ class LazyReviewQueue:
         self()
         assert self._live is not None
         return self._live
+
+    def kpis(self) -> KpiService:
+        self()
+        assert self._kpis is not None
+        return self._kpis
 
     def close(self) -> None:
         self._stack.close()

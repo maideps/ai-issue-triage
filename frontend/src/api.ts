@@ -65,6 +65,32 @@ export interface RunDetail {
   agreement: Agreement;
 }
 
+export interface Kpis {
+  live: {
+    runs: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    approval_rate: number | null;
+    edit_rate: number | null;
+    escalation_rate: number | null;
+    traced_runs: number;
+    llm_calls: number;
+    cost_per_issue_usd: number | null;
+    latency_ms_p50: number | null;
+    latency_ms_p95: number | null;
+    errors: number;
+  };
+  offline: {
+    triage_macro_f1: number | null;
+    triage_escalation_rate: number | null;
+    duplicate_recall_at_10: number | null;
+    answer_faithfulness: number | null;
+    answer_citation_validity: number | null;
+    replay_action_agreement: number | null;
+  };
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -96,6 +122,7 @@ const runPath = (repository: string, number: number) => `/api/runs/${repository}
 export const api = {
   listRuns: (status?: RunState) =>
     request<Run[]>(`/api/runs${status ? `?status=${status}` : ""}`),
+  kpis: () => request<Kpis>("/api/kpis"),
   getRun: (repository: string, number: number) =>
     request<RunDetail>(runPath(repository, number)),
   enqueue: (repository: string, number: number) =>

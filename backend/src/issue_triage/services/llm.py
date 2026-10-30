@@ -5,7 +5,7 @@ validated structured output, and a ledger of tokens, cost and latency for every 
 import json
 import re
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from statistics import quantiles
 from typing import Any, TypeVar
@@ -99,10 +99,12 @@ class LLMClient:
         ledger: CallLedger | None = None,
         *,
         max_validation_retries: int = 1,
+        on_call: Callable[[CallRecord], None] | None = None,
     ) -> None:
         self.provider = provider
         self.router = router
         self.ledger = ledger if ledger is not None else CallLedger()
+        self.on_call = on_call
         self._max_validation_retries = max_validation_retries
 
     def complete(
@@ -156,15 +158,16 @@ class LLMClient:
 
     def _record(self, step: str, prompt: str | None, completion: Completion, *, ok: bool) -> None:
         usage = completion.usage
-        self.ledger.add(
-            CallRecord(
-                step=step,
-                model=completion.model,
-                prompt=prompt,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cost_usd=usage.cost_usd,
-                latency_ms=usage.latency_ms,
-                ok=ok,
-            )
+        record = CallRecord(
+            step=step,
+            model=completion.model,
+            prompt=prompt,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cost_usd=usage.cost_usd,
+            latency_ms=usage.latency_ms,
+            ok=ok,
         )
+        self.ledger.add(record)
+        if self.on_call is not None:
+            self.on_call(record)

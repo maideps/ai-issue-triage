@@ -73,3 +73,8 @@ a { color: var(--accent); }
 .agreement { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .badge.agree { color: #2b8a3e; border-color: #2b8a3e; }
 .badge.disagree { color: var(--danger); border-color: var(--danger); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; }
+.kpi-value { font-size: 1.1rem; font-weight: 700; }
+.kpi-label { font-size: 0.75rem; color: var(--muted); }
