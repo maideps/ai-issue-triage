@@ -169,3 +169,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: every node's context is inspectable in code; runs are resumable and auditable; the routing step costs nothing.
 - Negative: the 0.8 duplicate threshold is not calibrated yet. In a real replay (#17846) the agent proposed #17791, a true duplicate the maintainers had not linked, while they linked #17711; the reviewer corrected it through an edit.
+
+### D-012: A trained classifier triages first and escalates to the LLM below 0.5 confidence
+
+**Date:** 2026-10-30
+**Status:** accepted (re-tune when a real LLM replaces the keyword baseline)
+**Context:** Type triage chooses among four known classes, the textbook case for a decision model instead of an LLM. The issue embeddings already stored for duplicate search (feat-009) make a classifier nearly free.
+**Decision:** Logistic regression (balanced class weights) on the `all-MiniLM-L6-v2` issue embeddings, trained on the oldest 85% of the train split (4,351 issues). The escalation threshold is chosen on the newest 15% of the train split (768 issues) and only then reported on the 1,543-issue test split. Test macro-F1: classifier alone 0.580, LLM step alone (keyword fake) 0.526, classifier escalating below 0.5 to the LLM 0.592 with 34.2% of issues escalated. Prediction takes about 0.01 ms per issue once embedded. The agent's triage node uses this `EscalatingTriager` whenever `eval-decision` has saved a model (`data/models/`, trained on the full train split).
+**Alternatives considered:**
+- LLM for every issue — Rejected: lower macro-F1 here and one paid call per issue once a real model is configured.
+- Picking the threshold on the test curve (0.4 scores 0.597) — Rejected: that would leak the test split into a design choice.
+**Consequences:**
+- Positive: two thirds of triage calls never reach an LLM; the decision is traceable (confidence and source per issue).
+- Negative: the threshold was tuned against the keyword fake; a stronger real model will likely move it higher.

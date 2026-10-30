@@ -65,6 +65,16 @@ class PostgresIssueVectorIndex:
             rows = session.execute(query).all()
         return sorted(((n, round(1.0 - float(d), 6)) for n, d in rows), key=lambda r: -r[1])
 
+    def vectors(self, repository: str, numbers: Sequence[int]) -> dict[int, list[float]]:
+        """Stored embeddings by issue number (missing issues are simply absent)."""
+        query = (
+            select(IssueRow.number, IssueEmbeddingRow.embedding)
+            .join(IssueEmbeddingRow, IssueEmbeddingRow.issue_id == IssueRow.id)
+            .where(IssueRow.repository == repository, IssueRow.number.in_(list(numbers)))
+        )
+        with self._sessions() as session:
+            return {int(n): [float(x) for x in e] for n, e in session.execute(query).all()}
+
     def count(self, repository: str) -> int:
         with self._sessions() as session:
             return len(

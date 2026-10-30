@@ -1,0 +1,123 @@
+{
+  "task": "type-decision-model",
+  "repository": "astral-sh/uv",
+  "model": "logistic regression on issue embeddings (class_weight=balanced)",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "llm_model": "fake/triage-keywords",
+  "train": 4351,
+  "validation": 768,
+  "test": 1543,
+  "chosen_threshold": 0.5,
+  "test_classifier_only": {
+    "threshold": 0.0,
+    "macro_f1": 0.5798,
+    "escalation_rate": 0.0
+  },
+  "test_llm_only": {
+    "threshold": 1.01,
+    "macro_f1": 0.5256,
+    "escalation_rate": 1.0
+  },
+  "test_escalating": {
+    "threshold": 0.5,
+    "macro_f1": 0.5915,
+    "escalation_rate": 0.3422
+  },
+  "classifier_ms_per_issue": 0.0121,
+  "llm_cost_usd_all_test": 0.0,
+  "llm_cost_usd_escalating": 0.0,
+  "validation_curve": [
+    {
+      "threshold": 0.0,
+      "macro_f1": 0.6006,
+      "escalation_rate": 0.0
+    },
+    {
+      "threshold": 0.3,
+      "macro_f1": 0.6017,
+      "escalation_rate": 0.0039
+    },
+    {
+      "threshold": 0.4,
+      "macro_f1": 0.6018,
+      "escalation_rate": 0.0898
+    },
+    {
+      "threshold": 0.5,
+      "macro_f1": 0.6078,
+      "escalation_rate": 0.3646
+    },
+    {
+      "threshold": 0.6,
+      "macro_f1": 0.5938,
+      "escalation_rate": 0.5898
+    },
+    {
+      "threshold": 0.7,
+      "macro_f1": 0.5654,
+      "escalation_rate": 0.7865
+    },
+    {
+      "threshold": 0.8,
+      "macro_f1": 0.5473,
+      "escalation_rate": 0.9258
+    },
+    {
+      "threshold": 0.9,
+      "macro_f1": 0.5287,
+      "escalation_rate": 0.9883
+    },
+    {
+      "threshold": 1.01,
+      "macro_f1": 0.5192,
+      "escalation_rate": 1.0
+    }
+  ],
+  "test_curve": [
+    {
+      "threshold": 0.0,
+      "macro_f1": 0.5798,
+      "escalation_rate": 0.0
+    },
+    {
+      "threshold": 0.3,
+      "macro_f1": 0.5822,
+      "escalation_rate": 0.0052
+    },
+    {
+      "threshold": 0.4,
+      "macro_f1": 0.5969,
+      "escalation_rate": 0.1108
+    },
+    {
+      "threshold": 0.5,
+      "macro_f1": 0.5915,
+      "escalation_rate": 0.3422
+    },
+    {
+      "threshold": 0.6,
+      "macro_f1": 0.5666,
+      "escalation_rate": 0.5638
+    },
+    {
+      "threshold": 0.7,
+      "macro_f1": 0.5495,
+      "escalation_rate": 0.7531
+    },
+    {
+      "threshold": 0.8,
+      "macro_f1": 0.5333,
+      "escalation_rate": 0.897
+    },
+    {
+      "threshold": 0.9,
+      "macro_f1": 0.5253,
+      "escalation_rate": 0.9857
+    },
+    {
+      "threshold": 1.01,
+      "macro_f1": 0.5256,
+      "escalation_rate": 1.0
+    }
+  ]
+}

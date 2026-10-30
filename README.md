@@ -127,6 +127,7 @@ node tools/py.mjs -m issue_triage eval-triage astral-sh/uv            # test spl
 | Majority class | 0.401 | 0.143 | $0 |
 | Keyword baseline (fake provider) | 0.613 | 0.526 | $0 |
 | Real model | pending an API key | | |
+| Trained classifier, escalating below 0.5 (default, [D-012](DECISIONS.md#d-012-a-trained-classifier-triages-first-and-escalates-to-the-llm-below-05-confidence)) | — | 0.592 | 34% of LLM calls |
 
 Results and how to run a real model: [`evals/results/`](evals/results/README.md).
 

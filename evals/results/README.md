@@ -12,6 +12,18 @@ Metric summaries only (no issue text, D-003). Each file records the prompt versi
 
 Per class F1 for the keyword baseline: bug 0.68 (619 issues), enhancement 0.64 (457), question 0.47 (426), other 0.32 (41).
 
+## Decision model for type triage (feat-013, D-012)
+
+Logistic regression on issue embeddings, trained on the oldest 85% of the train split (4,351), threshold chosen on the newest 15% (768), reported on the test split (1,543).
+
+| Approach | Macro-F1 | Issues sent to the LLM |
+|---|---|---|
+| Keyword LLM stand-in (fake) | 0.526 | 100% |
+| Classifier only | 0.580 | 0% |
+| Classifier, escalating below 0.5 | 0.592 | 34.2% |
+
+File: [decision-model-test.json](decision-model-test.json) (full threshold curves for validation and test).
+
 ## Duplicate detection (feat-009)
 
 Ground truth: the original linked when maintainers closed an issue as a duplicate. Every search is restricted to issues created before the duplicate, so all 319 pairs are time-valid (the train/test split only matters for trained models).

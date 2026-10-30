@@ -7,18 +7,23 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 
+import joblib
+
 from issue_triage.config import Settings, get_settings
 from issue_triage.domain.docs import CHUNKERS, Embedder
 from issue_triage.domain.evaluation import (
+    TYPE_CLASSES,
     AnswerCase,
     DuplicateCase,
     TypeCase,
     build_doc_link_cases,
 )
+from issue_triage.domain.metrics import classification_report
 from issue_triage.domain.pseudonymize import Pseudonymizer
 from issue_triage.domain.sources import IssueSource
 from issue_triage.infrastructure.checkpointer import postgres_checkpointer
@@ -39,6 +44,7 @@ from issue_triage.services.agent.state import Review
 from issue_triage.services.answer_eval import Judge, evaluate_answers
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.datasets import build_datasets, select_golden
+from issue_triage.services.decision_model import EmbeddingClassifier, escalation_curve
 from issue_triage.services.docs_index import evaluate_doc_retrieval, index_docs, issue_query
 from issue_triage.services.duplicates import (
     RERANK_VARIANTS,
@@ -219,6 +225,87 @@ def cmd_eval_answers(args: argparse.Namespace, settings: Settings) -> int:
     ):
         print(f"  {key:36} {summary[key]}")
     print(f"written to {out}")
+    return 0
+
+
+THRESHOLDS = (0.0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.01)
+
+
+def macro_f1(expected: Sequence[str], predicted: Sequence[str]) -> float:
+    return classification_report(expected, predicted, TYPE_CLASSES).macro_f1
+
+
+def cmd_eval_decision(args: argparse.Namespace, settings: Settings) -> int:
+    """Train on older issues, tune the escalation threshold on the newest train slice,
+    report on the test split (D-004)."""
+    cases = read_cases(dataset_path(settings, args.repository, "type"), TypeCase)
+    vectors = vector_index(settings).vectors(args.repository, [c.number for c in cases])
+    cases = sorted((c for c in cases if c.number in vectors), key=lambda c: c.as_of)
+    train = [c for c in cases if c.split == "train"]
+    test = [c for c in cases if c.split == "test"]
+    cut = int(len(train) * 0.85)
+    fit_set, validation = train[:cut], train[cut:]
+
+    classifier = EmbeddingClassifier().fit(
+        [vectors[c.number] for c in fit_set], [c.label for c in fit_set]
+    )
+    llm = build_llm_client(settings)
+    triager = Triager(llm)
+
+    def llm_labels(subset: Sequence[TypeCase]) -> list[str]:
+        return [triager.classify(c.title, c.body).label for c in subset]
+
+    val_curve = escalation_curve(
+        [c.label for c in validation],
+        classifier.predict([vectors[c.number] for c in validation]),
+        llm_labels(validation),
+        THRESHOLDS,
+        macro_f1,
+    )
+    best = max(val_curve, key=lambda r: (r["macro_f1"], -r["escalation_rate"]))
+
+    start = time.perf_counter()
+    test_predictions = classifier.predict([vectors[c.number] for c in test])
+    classifier_ms = (time.perf_counter() - start) * 1000 / max(1, len(test))
+    llm_before = len(llm.ledger.records)
+    test_llm = llm_labels(test)
+    test_records = llm.ledger.records[llm_before:]
+    test_curve = escalation_curve(
+        [c.label for c in test], test_predictions, test_llm, THRESHOLDS, macro_f1
+    )
+    at_best = next(r for r in test_curve if r["threshold"] == best["threshold"])
+    llm_cost = sum(r.cost_usd for r in test_records)
+    summary = {
+        "task": "type-decision-model",
+        "repository": args.repository,
+        "model": "logistic regression on issue embeddings (class_weight=balanced)",
+        "embedding_model": settings.embedding_model,
+        "llm_model": llm.router.model_for("triage"),
+        "train": len(fit_set),
+        "validation": len(validation),
+        "test": len(test),
+        "chosen_threshold": best["threshold"],
+        "test_classifier_only": test_curve[0],
+        "test_llm_only": test_curve[-1],
+        "test_escalating": at_best,
+        "classifier_ms_per_issue": round(classifier_ms, 4),
+        "llm_cost_usd_all_test": round(llm_cost, 6),
+        "llm_cost_usd_escalating": round(llm_cost * at_best["escalation_rate"], 6),
+        "validation_curve": val_curve,
+        "test_curve": test_curve,
+    }
+    out = settings.evals_dir / "results" / "decision-model-test.json"
+    write_json(out, summary)
+    model_path = settings.data_dir / "models" / f"{args.repository.replace('/', '__')}-type.joblib"
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(
+        EmbeddingClassifier().fit([vectors[c.number] for c in train], [c.label for c in train]),
+        model_path,
+    )
+    for name in ("test_classifier_only", "test_llm_only", "test_escalating"):
+        row = summary[name]
+        print(f"{name:22} macro-F1 {row['macro_f1']:.3f}  escalated {row['escalation_rate']:.1%}")
+    print(f"threshold {best['threshold']} (chosen on validation); written to {out}")
     return 0
 
 
@@ -429,6 +516,10 @@ def build_parser() -> argparse.ArgumentParser:
     eval_answers.add_argument("--split", choices=["test", "train", "all"], default="test")
     eval_answers.add_argument("--limit", type=int, default=0)
     eval_answers.set_defaults(handler=cmd_eval_answers)
+
+    eval_decision = commands.add_parser("eval-decision", help="classifier vs LLM type triage")
+    eval_decision.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    eval_decision.set_defaults(handler=cmd_eval_decision)
 
     agent_run = commands.add_parser("agent-run", help="replay an issue through the triage graph")
     agent_run.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

@@ -2,6 +2,8 @@
 
 from collections.abc import Mapping
 
+import joblib
+
 from issue_triage.config import Settings
 from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions
@@ -12,8 +14,9 @@ from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.llm.fake import FakeHandler, FakeLLMProvider
 from issue_triage.infrastructure.llm.fake_handlers import DEFAULT_HANDLERS
 from issue_triage.infrastructure.llm.litellm_provider import LiteLLMProvider, RoutingProvider
-from issue_triage.services.agent.graph import AgentDeps
+from issue_triage.services.agent.graph import AgentDeps, Classifier
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
+from issue_triage.services.decision_model import EscalatingTriager
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.duplicates import SimilarIssueFinder
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
@@ -49,8 +52,13 @@ def build_agent_deps(settings: Settings, repository: str) -> AgentDeps:
     drafter = AnswerDrafter(
         llm, DocRetriever(embedder, PostgresChunkRepository(sessions), repository)
     )
+    # The trained classifier handles confident cases when `eval-decision` has saved one (D-012).
+    model_path = settings.data_dir / "models" / f"{repository.replace('/', '__')}-type.joblib"
+    triager: Classifier = Triager(llm)
+    if model_path.exists():
+        triager = EscalatingTriager(joblib.load(model_path), embedder.embed, Triager(llm))
     return AgentDeps(
-        triager=Triager(llm),
+        triager=triager,
         finder=finder,
         drafter=drafter,
         embed=embedder.embed,
