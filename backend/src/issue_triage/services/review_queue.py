@@ -5,7 +5,7 @@ resumes the agent and is kept as feedback (original text, final text, who decide
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -36,6 +36,12 @@ class IssueLookup(Protocol):
     def get(self, repository: str, number: int) -> Issue | None: ...
 
 
+class Publisher(Protocol):
+    def allowed(self, repository: str) -> bool: ...
+
+    def post(self, repository: str, number: int, body: str) -> str: ...
+
+
 class NotFound(LookupError):
     pass
 
@@ -57,10 +63,17 @@ class RunDetail:
 
 
 class ReviewQueue:
-    def __init__(self, agent: Agent, runs: RunStore, issues: IssueLookup) -> None:
+    def __init__(
+        self,
+        agent: Agent,
+        runs: RunStore,
+        issues: IssueLookup,
+        publisher: Publisher | None = None,
+    ) -> None:
         self._agent = agent
         self._runs = runs
         self._issues = issues
+        self._publisher = publisher
 
     def _issue(self, repository: str, number: int) -> Issue:
         issue = self._issues.get(repository, number)
@@ -161,7 +174,13 @@ class ReviewQueue:
             raise NotPending(f"{repository}#{number} was already {run.status}")
         review = Review(decision=decision, text=text, reviewer=reviewer)
         status = self._agent.review(repository, number, review)
-        self._runs.upsert(self._record(self._issue(repository, number), status))
+        record = self._record(self._issue(repository, number), status)
+        final = status.outcome.final_text if status.outcome else None
+        # Only approved text, only to allowlisted repositories (D-003, D-014).
+        if final and self._publisher is not None and self._publisher.allowed(repository):
+            url = self._publisher.post(repository, number, final)
+            record = replace(record, evidence={**record.evidence, "posted_url": url})
+        self._runs.upsert(record)
         self._runs.add_feedback(
             FeedbackRecord(
                 repository,

@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Matches the local docker-compose `db` service; demo credentials only.
     database_url: str = "postgresql+psycopg://triage:triage@localhost:5433/issue_triage"
     github_token: SecretStr | None = None
+    # Live mode (D-014): sandboxes whose new issues are triaged and which may receive
+    # approved replies. Empty means live mode is off. The evaluation target
+    # (`repository`) is always refused, even if listed.
+    sandbox_repositories: list[str] = []
+    webhook_secret: SecretStr | None = None
     # Model per pipeline step, e.g. {"triage": "anthropic/claude-haiku-5-5"} as JSON.
     # Everything defaults to the deterministic fake until a key is configured (D-007).
     llm_default_model: str = "fake/default"

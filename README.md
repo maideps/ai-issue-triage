@@ -135,6 +135,18 @@ In the UI, enter any uv issue number to replay it as of its creation date. The s
 node tools/py.mjs -m issue_triage eval-replay astral-sh/uv
 ```
 
+## Live mode on your own sandbox
+
+Off by default. To try it on a repository you own (never on someone else's project, [D-014](DECISIONS.md#d-014-live-mode-only-for-allowlisted-sandboxes-posting-guarded-in-one-place)):
+
+```bash
+export ISSUE_TRIAGE_SANDBOX_REPOSITORIES='["you/your-sandbox"]'
+node tools/py.mjs -m issue_triage sandbox-poll you/your-sandbox   # queue its open issues
+npm run dev:backend && npm run dev:frontend                       # review and approve in the UI
+```
+
+Approving posts the approved text as a comment on that sandbox issue; rejecting posts nothing. With a public URL, point a GitHub webhook (`issues` events, secret in `ISSUE_TRIAGE_WEBHOOK_SECRET`) at `/api/webhooks/github` instead of polling. Posting to astral-sh/uv is refused in code even if it is listed.
+
 ## Evaluate triage
 
 ```bash

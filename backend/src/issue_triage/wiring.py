@@ -1,5 +1,6 @@
 """Composition root helpers shared by the CLI and the HTTP app."""
 
+import subprocess
 from collections.abc import Mapping
 from contextlib import ExitStack
 from threading import Lock
@@ -7,6 +8,8 @@ from threading import Lock
 import joblib
 
 from issue_triage.config import Settings
+from issue_triage.domain.pseudonymize import Pseudonymizer
+from issue_triage.domain.publishing import SafePublisher
 from issue_triage.infrastructure.checkpointer import postgres_checkpointer
 from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions
@@ -14,6 +17,7 @@ from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorInde
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
 from issue_triage.infrastructure.db.runs import PostgresRunStore
 from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
+from issue_triage.infrastructure.github_rest import GitHubRest, issue_from_payload
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.llm.fake import FakeHandler, FakeLLMProvider
 from issue_triage.infrastructure.llm.fake_handlers import DEFAULT_HANDLERS
@@ -24,10 +28,30 @@ from issue_triage.services.answers import AnswerDrafter, DocRetriever
 from issue_triage.services.decision_model import EscalatingTriager
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.duplicates import SimilarIssueFinder
+from issue_triage.services.live import LiveIntake
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
 from issue_triage.services.query_rewrite import QueryRewriter
 from issue_triage.services.review_queue import ReviewQueue
 from issue_triage.services.triage import Triager
+
+
+def github_token(settings: Settings) -> str:
+    if settings.github_token is not None:
+        return settings.github_token.get_secret_value()
+    result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)
+    token = result.stdout.strip()
+    if result.returncode != 0 or not token:
+        raise SystemExit("No GitHub token: set ISSUE_TRIAGE_GITHUB_TOKEN or run `gh auth login`.")
+    return token
+
+
+def build_publisher(settings: Settings) -> SafePublisher | None:
+    """Posting exists only when sandboxes are configured, and never to the target."""
+    if not settings.sandbox_repositories:
+        return None
+    return SafePublisher(
+        GitHubRest(github_token(settings)), settings.sandbox_repositories, [settings.repository]
+    )
 
 
 def build_llm_client(
@@ -79,6 +103,7 @@ class LazyReviewQueue:
         self._settings = settings
         self._stack = ExitStack()
         self._queue: ReviewQueue | None = None
+        self._live: LiveIntake | None = None
         self._lock = Lock()
 
     def __call__(self) -> ReviewQueue:
@@ -92,8 +117,21 @@ class LazyReviewQueue:
                     TriageAgent(build_graph(deps, saver)),
                     PostgresRunStore(sessions),
                     PostgresIssueRepository(sessions),
+                    build_publisher(settings),
+                )
+                self._live = LiveIntake(
+                    self._queue,
+                    PostgresIssueRepository(sessions),
+                    Pseudonymizer(settings.pseudonym_salt.get_secret_value()),
+                    settings.sandbox_repositories,
+                    issue_from_payload,
                 )
             return self._queue
+
+    def live(self) -> LiveIntake:
+        self()
+        assert self._live is not None
+        return self._live
 
     def close(self) -> None:
         self._stack.close()

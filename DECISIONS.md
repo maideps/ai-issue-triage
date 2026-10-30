@@ -195,3 +195,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: the system-level weak spot is located precisely: `decide`'s needs-info rule (version or code present means "has info") is far stricter than maintainers, the 0.8 duplicate threshold is conservative, and summary absorbs everything else.
 - Negative: until calibrated on the train split, end-to-end action agreement is low; per-component metrics overstate the system.
+
+### D-014: Live mode only for allowlisted sandboxes; posting guarded in one place
+
+**Date:** 2026-10-30
+**Status:** accepted (live end-to-end check on a real sandbox not run yet)
+**Context:** feat-016 lets new issues enter the queue as they are opened and lets approved replies be posted. D-003 forbids posting to real projects; uv's AI policy forbids AI communication with its maintainers.
+**Decision:** Live mode is off unless `ISSUE_TRIAGE_SANDBOX_REPOSITORIES` lists repositories the author owns. Intake: a GitHub webhook (`POST /api/webhooks/github`, `issues` / `opened`) verified with `X-Hub-Signature-256` against `ISSUE_TRIAGE_WEBHOOK_SECRET`, or `sandbox-poll` for local use without a public URL; authors and mentions are pseudonymized like ingested issues. Posting: `SafePublisher` wraps the GitHub client so every call passes `check_allowed`, which refuses anything not on the allowlist and always refuses the evaluation target (`ISSUE_TRIAGE_REPOSITORY`, astral-sh/uv) even if listed. The review queue posts only the approved (possibly edited) text, only after approval, and records the comment URL.
+**Alternatives considered:**
+- A webhook-only design — Rejected: GitHub cannot reach localhost without a tunnel service; polling keeps the demo self-contained.
+- Checking the allowlist in the API layer — Rejected: one guarded publisher means no code path can post around it.
+**Consequences:**
+- Positive: the only way to post is approval plus allowlist plus not-the-target, each covered by tests.
+- Negative: the sandbox run against a real GitHub repository needs the author's go-ahead (it creates a repository and posts a comment) and has not been done; the automated tests use a recording poster.

@@ -6,7 +6,6 @@ Composition root (like ``main.py``): wires infrastructure into the use cases.
 import argparse
 import json
 import random
-import subprocess
 import sys
 import time
 from collections.abc import Sequence
@@ -37,6 +36,7 @@ from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorInde
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
 from issue_triage.infrastructure.docs_source import GitHubDocsSource
 from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
+from issue_triage.infrastructure.github_rest import GitHubRest
 from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urllib_transport
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
@@ -61,7 +61,12 @@ from issue_triage.services.loading import load_issues
 from issue_triage.services.query_rewrite import QUERY_REWRITE_STEP, QueryRewriter
 from issue_triage.services.replay_eval import evaluate_replay
 from issue_triage.services.triage import Triager
-from issue_triage.wiring import build_agent_deps, build_llm_client
+from issue_triage.wiring import (
+    LazyReviewQueue,
+    build_agent_deps,
+    build_llm_client,
+    github_token,
+)
 
 
 def dataset_path(settings: Settings, repository: str, name: str) -> Path:
@@ -359,6 +364,21 @@ def cmd_eval_replay(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_sandbox_poll(args: argparse.Namespace, settings: Settings) -> int:
+    """Queue new issues from an allowlisted sandbox (no public webhook URL needed)."""
+    if args.repository.lower() not in {s.lower() for s in settings.sandbox_repositories}:
+        raise SystemExit(f"{args.repository} is not in ISSUE_TRIAGE_SANDBOX_REPOSITORIES")
+    services = LazyReviewQueue(settings)
+    try:
+        details = services.live().poll(GitHubRest(github_token(settings)), args.repository)
+        for detail in details:
+            print(f"queued #{detail.run.number}: {detail.run.action} - {detail.run.title}")
+        print(f"{len(details)} new issue(s) queued from {args.repository}")
+    finally:
+        services.close()
+    return 0
+
+
 def print_status(status: RunStatus) -> None:
     print(f"{status.thread_id}: next={list(status.next_nodes) or 'done'}")
     if status.decision:
@@ -460,16 +480,6 @@ def cmd_eval_triage(args: argparse.Namespace, settings: Settings) -> int:
     print(f"  accuracy {summary['accuracy']:.3f}  macro-F1 {summary['macro_f1']:.3f}")
     print(f"  cost ${summary['llm']['total']['cost_usd']:.4f}  written to {out}")
     return 0
-
-
-def github_token(settings: Settings) -> str:
-    if settings.github_token is not None:
-        return settings.github_token.get_secret_value()
-    result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)
-    token = result.stdout.strip()
-    if result.returncode != 0 or not token:
-        raise SystemExit("No GitHub token: set ISSUE_TRIAGE_GITHUB_TOKEN or run `gh auth login`.")
-    return token
 
 
 def make_source(settings: Settings, page_size: int) -> IssueSource:
@@ -575,6 +585,10 @@ def build_parser() -> argparse.ArgumentParser:
     eval_replay.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
     eval_replay.add_argument("--per-group", type=int, default=25)
     eval_replay.set_defaults(handler=cmd_eval_replay)
+
+    sandbox_poll = commands.add_parser("sandbox-poll", help="queue new sandbox issues")
+    sandbox_poll.add_argument("repository", help="an allowlisted sandbox, owner/name")
+    sandbox_poll.set_defaults(handler=cmd_sandbox_poll)
 
     agent_run = commands.add_parser("agent-run", help="replay an issue through the triage graph")
     agent_run.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
