@@ -122,3 +122,17 @@ class GitHubDocsSource:
             if (text := path.read_text(encoding="utf-8"))
         ]
         return sha, pages
+
+
+def local_docs(root: Path, repository: str) -> list[DocPage]:
+    """Docs already on disk (the committed demo snapshot), same shape as a snapshot."""
+    return [
+        DocPage(
+            source=repository,
+            path=path.relative_to(root).as_posix(),
+            title=page_title(text, path.stem.replace("-", " ")),
+            text=text,
+        )
+        for path in sorted(root.rglob("*.md"))
+        if path.name != "NOTICE.md" and (text := path.read_text(encoding="utf-8"))
+    ]

@@ -171,6 +171,8 @@
     "tools/",
     "docker-compose.yml",
     "frontend/",
+    "samples/",
+    ".dockerignore",
     ".github/workflows/publish.yml",
     "repo-completion-plan.md"
   ],

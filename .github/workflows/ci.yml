@@ -51,3 +51,11 @@ jobs:
 
       - name: Verify architecture
         run: npm run check-arch
+
+      # Cached evaluation suite: triage on the committed golden sample (fake provider,
+      # no database, no spend) must stay within 0.02 macro-F1 of the committed baseline.
+      - name: Golden-set evaluation gate
+        run: node tools/py.mjs -m issue_triage eval-golden --check
+
+      - name: Compose file is valid
+        run: docker compose config --quiet

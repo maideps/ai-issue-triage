@@ -34,7 +34,7 @@ from issue_triage.infrastructure.db.chunks import PostgresChunkRepository
 from issue_triage.infrastructure.db.engine import make_engine, make_sessions, upgrade
 from issue_triage.infrastructure.db.issue_vectors import PostgresIssueVectorIndex
 from issue_triage.infrastructure.db.issues import PostgresIssueRepository
-from issue_triage.infrastructure.docs_source import GitHubDocsSource
+from issue_triage.infrastructure.docs_source import GitHubDocsSource, local_docs
 from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
 from issue_triage.infrastructure.github_rest import GitHubRest
 from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urllib_transport
@@ -426,6 +426,80 @@ def cmd_agent_review(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+GOLDEN_TOLERANCE = 0.02
+
+
+def cmd_eval_golden(args: argparse.Namespace, settings: Settings) -> int:
+    """Triage on the committed golden sample: no database, safe for CI."""
+    slug = args.repository.replace("/", "__")
+    golden = settings.evals_dir / "datasets" / "golden" / f"{slug}-golden.jsonl"
+    records = [
+        json.loads(line) for line in golden.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
+    cases = [
+        TypeCase(
+            args.repository,
+            r["number"],
+            datetime.fromisoformat(r["as_of"]),
+            r["title"],
+            r["body"],
+            "test",
+            r["type_label"],
+        )
+        for r in records
+        if r["type_label"]
+    ]
+    llm = build_llm_client(settings)
+    summary = run_type_eval(cases, Triager(llm), llm.ledger)
+    baseline_path = settings.evals_dir / "results" / f"golden-baseline-{slug}.json"
+    n, f1 = summary["n"], summary["macro_f1"]
+    print(f"golden triage: macro-F1 {f1:.3f} on {n} issues ({summary['models']})")
+    if args.update or not baseline_path.exists():
+        write_json(
+            baseline_path,
+            {"macro_f1": summary["macro_f1"], "n": summary["n"], "models": summary["models"]},
+        )
+        print(f"baseline written to {baseline_path}")
+        return 0
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    if args.check and summary["macro_f1"] < baseline["macro_f1"] - GOLDEN_TOLERANCE:
+        print(f"REGRESSION: below baseline {baseline['macro_f1']:.3f} - {GOLDEN_TOLERANCE}")
+        return 1
+    print(f"baseline {baseline['macro_f1']:.3f}: ok")
+    return 0
+
+
+def cmd_demo_seed(args: argparse.Namespace, settings: Settings) -> int:
+    """Make a fresh database demo-ready from the committed sample; safe to rerun."""
+    repository = args.repository
+    upgrade(settings.database_url)
+    issues = issue_repository(settings)
+    demo = settings.samples_dir / "demo"
+    if issues.count(repository) == 0:
+        print(f"loaded {load_issues(JsonlIssueStore(demo), issues, repository)} demo issues")
+    vectors = vector_index(settings)
+    if vectors.count(repository) < issues.count(repository):
+        embedded = embed_issues(issues.list(repository), make_embedder(settings), vectors)
+        print(f"embedded {embedded} issues")
+    chunks = chunk_index(settings)
+    if chunks.count(repository, "heading") == 0:
+        pages = local_docs(demo / "docs", repository)
+        indexed = index_docs(pages, "heading", make_embedder(settings), chunks, "demo")
+        print(f"indexed {indexed} doc chunks")
+    services = LazyReviewQueue(settings)
+    try:
+        queue = services()
+        if not queue.list(limit=1):
+            golden = json.loads((demo / "golden.json").read_text(encoding="utf-8"))
+            for number in golden[: args.queue]:
+                queue.enqueue(repository, number)
+            print(f"queued {min(args.queue, len(golden))} golden issues for review")
+    finally:
+        services.close()
+    print("demo ready")
+    return 0
+
+
 def cmd_eval_docs(args: argparse.Namespace, settings: Settings) -> int:
     answers = [
         a
@@ -604,6 +678,17 @@ def build_parser() -> argparse.ArgumentParser:
     verdict.add_argument("--edit", metavar="TEXT", help="approve with this reply instead")
     agent_review.add_argument("--reviewer", default="maintainer")
     agent_review.set_defaults(handler=cmd_agent_review)
+
+    eval_golden = commands.add_parser("eval-golden", help="triage on the golden sample (CI gate)")
+    eval_golden.add_argument("repository", nargs="?", default="astral-sh/uv")
+    eval_golden.add_argument("--check", action="store_true", help="fail on a regression")
+    eval_golden.add_argument("--update", action="store_true", help="rewrite the baseline")
+    eval_golden.set_defaults(handler=cmd_eval_golden)
+
+    demo_seed = commands.add_parser("demo-seed", help="prepare a fresh database for the demo")
+    demo_seed.add_argument("repository", nargs="?", default="astral-sh/uv")
+    demo_seed.add_argument("--queue", type=int, default=8, help="golden issues to queue")
+    demo_seed.set_defaults(handler=cmd_demo_seed)
 
     eval_docs = commands.add_parser("eval-docs", help="compare chunkers on doc retrieval")
     eval_docs.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

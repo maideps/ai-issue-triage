@@ -1,4 +1,5 @@
-# Local stack. feat-018 adds the API, worker and UI; for now only the database.
+# One-command demo: `docker compose up --build`, then open http://localhost:8080.
+# Everything runs on the deterministic fake LLM and local models: no keys, no spend (D-007).
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -15,6 +16,42 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  # Loads the committed demo sample (400 uv issues, docs snapshot), embeds and indexes it,
+  # and queues a few golden issues. Safe to rerun: it skips what is already there.
+  seed:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ai-issue-triage-backend
+    command: ["python", "-m", "issue_triage", "demo-seed"]
+    environment: &backend-env
+      ISSUE_TRIAGE_DATABASE_URL: postgresql+psycopg://triage:triage@db:5432/issue_triage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: ai-issue-triage-backend
+    environment: *backend-env
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${ISSUE_TRIAGE_WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   triage_pgdata:

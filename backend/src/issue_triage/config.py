@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_dim: int = 384
     docs_base_url: str = "https://docs.astral.sh/uv/"
+    # Committed demo data for the one-command stack (feat-018).
+    samples_dir: Path = REPO_ROOT / "samples"
     # Committed evaluation artefacts: small samples and results summaries.
     evals_dir: Path = REPO_ROOT / "evals"
     # Matches the local docker-compose `db` service; demo credentials only.

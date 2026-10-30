@@ -6,6 +6,18 @@
 
 **Stack (planned):** FastAPI · PostgreSQL + pgvector · LiteLLM (provider abstraction, deterministic fake by default) · LangGraph · RAGAS · React + TypeScript · Docker Compose · GitHub Actions
 
+## Run it in five minutes
+
+All you need is Docker with Compose v2.
+
+```bash
+git clone https://github.com/maideps/ai-issue-triage.git
+cd ai-issue-triage
+docker compose up --build
+```
+
+Open **http://localhost:8080** once the `seed` container prints `demo ready`. The first build downloads CPU-only PyTorch and bakes the embedding model into the image (about 10 minutes, 2.7 GB); later starts take seconds. The seed loads a committed sample (400 pseudonymized uv issues and the uv docs snapshot, `samples/demo/`), embeds and indexes it, and queues 8 golden issues for review. Everything runs on the deterministic fake LLM and local models: no API key, no spend. Change ports with `ISSUE_TRIAGE_WEB_PORT` / `ISSUE_TRIAGE_DB_PORT`; `docker compose down -v` removes the data.
+
 ## Status
 
 Early development. The FastAPI service skeleton is in place (`GET /health`, typed settings, layered packages with their import rules tested). See [`feature_list.json`](feature_list.json) for the plan and [`PROGRESS.md`](PROGRESS.md) for the current state.
