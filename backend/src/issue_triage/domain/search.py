@@ -35,6 +35,12 @@ class IssueKeywordIndex(Protocol):
         ...
 
 
+class Reranker(Protocol):
+    def score(self, query: str, texts: Sequence[str]) -> list[float]:
+        """Relevance of each text to the query; higher is better."""
+        ...
+
+
 def reciprocal_rank_fusion(
     rankings: Sequence[Sequence[int]], *, k: int = RRF_K, limit: int = 10
 ) -> list[int]:

@@ -31,9 +31,11 @@ from issue_triage.infrastructure.embeddings import SentenceTransformerEmbedder
 from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urllib_transport
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
+from issue_triage.infrastructure.reranker import CrossEncoderReranker
 from issue_triage.services.datasets import build_datasets, select_golden
-from issue_triage.services.docs_index import evaluate_doc_retrieval, index_docs
+from issue_triage.services.docs_index import evaluate_doc_retrieval, index_docs, issue_query
 from issue_triage.services.duplicates import (
+    RERANK_VARIANTS,
     SimilarIssueFinder,
     embed_issues,
     evaluate_duplicates,
@@ -41,6 +43,7 @@ from issue_triage.services.duplicates import (
 from issue_triage.services.eval_runner import run_type_eval
 from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
+from issue_triage.services.query_rewrite import QUERY_REWRITE_STEP, QueryRewriter
 from issue_triage.services.triage import Triager
 from issue_triage.wiring import build_llm_client
 
@@ -129,6 +132,49 @@ def cmd_eval_duplicates(args: argparse.Namespace, settings: Settings) -> int:
             f"{r['mode']:8} n={r['n']} recall@1={r['recall_at_1']:.3f} "
             f"recall@5={r['recall_at_5']:.3f} recall@{args.k}={r[f'recall_at_{args.k}']:.3f} "
             f"mrr@{args.k}={r[f'mrr_at_{args.k}']:.3f}"
+        )
+    print(f"written to {out}")
+    return 0
+
+
+def cmd_eval_rerank(args: argparse.Namespace, settings: Settings) -> int:
+    cases = [
+        c
+        for c in read_cases(dataset_path(settings, args.repository, "duplicates"), DuplicateCase)
+        if args.split == "all" or c.split == args.split
+    ]
+    issues = issue_repository(settings).list(args.repository)
+    texts = {i.number: issue_query(i.title, i.body) for i in issues}
+    embedder = make_embedder(settings)
+    llm = build_llm_client(settings)
+    finder = SimilarIssueFinder(
+        args.repository,
+        embedder,
+        vector_index(settings),
+        Bm25IssueIndex(issues),
+        rewriter=QueryRewriter(llm),
+        reranker=CrossEncoderReranker(settings.reranker_model),
+        candidate_text=texts.__getitem__,
+    )
+    results = evaluate_duplicates(cases, finder, embedder, variants=RERANK_VARIANTS, k=args.k)
+    summary = {
+        "task": "duplicates-rerank",
+        "repository": args.repository,
+        "split": args.split,
+        "embedding_model": settings.embedding_model,
+        "reranker_model": settings.reranker_model,
+        "query_rewrite_model": llm.router.model_for(QUERY_REWRITE_STEP),
+        "rerank_top": 20,
+        "results": results,
+        "llm": llm.ledger.summary(),
+    }
+    out = settings.evals_dir / "results" / f"rerank-{args.split}.json"
+    write_json(out, summary)
+    for r in results:
+        print(
+            f"{r['mode']:22} recall@1={r['recall_at_1']:.3f} recall@5={r['recall_at_5']:.3f} "
+            f"recall@{args.k}={r[f'recall_at_{args.k}']:.3f} mrr={r[f'mrr_at_{args.k}']:.3f} "
+            f"p50={r['latency_ms_p50']}ms"
         )
     print(f"written to {out}")
     return 0
@@ -282,6 +328,12 @@ def build_parser() -> argparse.ArgumentParser:
     eval_dups.add_argument("--split", choices=["test", "train", "all"], default="test")
     eval_dups.add_argument("--k", type=int, default=10)
     eval_dups.set_defaults(handler=cmd_eval_duplicates)
+
+    eval_rerank = commands.add_parser("eval-rerank", help="measure query rewriting and reranking")
+    eval_rerank.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
+    eval_rerank.add_argument("--split", choices=["test", "train", "all"], default="all")
+    eval_rerank.add_argument("--k", type=int, default=10)
+    eval_rerank.set_defaults(handler=cmd_eval_rerank)
 
     eval_docs = commands.add_parser("eval-docs", help="compare chunkers on doc retrieval")
     eval_docs.add_argument("repository", help="owner/name, e.g. astral-sh/uv")

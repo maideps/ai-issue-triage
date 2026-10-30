@@ -99,4 +99,30 @@ def triage_keywords(messages: Sequence[Message], schema: dict[str, Any] | None) 
     )
 
 
-DEFAULT_HANDLERS: dict[str, FakeHandler] = {"triage-keywords": triage_keywords}
+ERROR_LINE = re.compile(
+    r"^.*\b(?:error|failed|failure|panic|panicked|exception|caused by|traceback)\b.*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+INLINE_CODE = re.compile(r"`([^`\n]{2,80})`")
+
+
+def query_keyphrases(messages: Sequence[Message], schema: dict[str, Any] | None) -> str:
+    """Stand-in for query rewriting: the title, the first error line, the inline code."""
+    user = messages[-1].content if messages else ""
+    title_match = TITLE.search(user)
+    body_match = ISSUE_BLOCK.search(user)
+    body = body_match.group(1) if body_match else user
+    error_line = ERROR_LINE.search(body)
+    candidates = [
+        title_match.group(1).strip() if title_match else "",
+        error_line.group(0).strip()[:200] if error_line else "",
+        " ".join(dict.fromkeys(INLINE_CODE.findall(body)))[:150],
+    ]
+    queries = [q for q in dict.fromkeys(candidates) if q]
+    return json.dumps({"queries": queries[:3]})
+
+
+DEFAULT_HANDLERS: dict[str, FakeHandler] = {
+    "triage-keywords": triage_keywords,
+    "query-keyphrases": query_keyphrases,
+}

@@ -129,3 +129,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: self-contained, citable chunks; a smaller index.
 - Negative: the vector column is fixed at 384 dimensions; the evaluation sample is small (50), so the comparison is indicative, not conclusive.
+
+### D-009: Query rewriting on, cross-encoder reranking off for duplicate search
+
+**Date:** 2026-10-30
+**Status:** accepted
+**Context:** feat-010 measured two standard retrieval upgrades on top of hybrid search (D-008, feat-009) against the 319 maintainer-linked duplicate pairs: LLM query rewriting (the issue becomes up to three focused queries, each searched with vector and BM25, all fused by RRF) and cross-encoder reranking of the top 20 (`cross-encoder/ms-marco-MiniLM-L-6-v2`, local). The rewriter ran on the deterministic fake (`fake/query-keyphrases`: title, first error line, inline code), per D-007.
+**Decision:** Similar-issue search uses hybrid + query rewriting by default; reranking stays implemented but disabled. Results (recall@1 / @5 / @10, MRR@10, p50 latency): hybrid 0.144 / 0.351 / 0.467, 0.235, 601 ms; + rewrite 0.172 / 0.411 / 0.527, 0.278, 624 ms; + rerank 0.129 / 0.345 / 0.455, 0.223, 3,377 ms; + rewrite + rerank 0.141 / 0.367 / 0.480, 0.237, 5,810 ms.
+**Alternatives considered:**
+- Reranking on — Rejected: lower quality and five to ten times the latency. The MS MARCO cross-encoder scores web-query-to-passage relevance, not whether two bug reports describe the same problem, and truncates long issues.
+- A larger or domain-tuned reranker — Deferred: worth testing once a real model or a fine-tuned pair classifier is available.
+**Consequences:**
+- Positive: +6 points of recall@10 for about 4% more latency, with no model spend; a documented negative result instead of an assumed improvement.
+- Negative: rewriting adds one LLM call per issue once a real model replaces the fake.

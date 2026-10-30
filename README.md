@@ -96,6 +96,8 @@ node tools/py.mjs -m issue_triage eval-duplicates astral-sh/uv --split all
 | Vector | 0.398 | 0.211 |
 | Keyword (BM25) | 0.401 | 0.219 |
 | Hybrid (RRF) | 0.467 | 0.235 |
+| Hybrid + query rewriting (default, [D-009](DECISIONS.md#d-009-query-rewriting-on-cross-encoder-reranking-off-for-duplicate-search)) | 0.527 | 0.278 |
+| Hybrid + cross-encoder rerank | 0.455 | 0.223 |
 
 ## Evaluate triage
 
