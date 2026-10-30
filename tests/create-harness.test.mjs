@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -107,6 +108,123 @@ test("placeTemplates: rerunning with the same component against an existing adop
     const placedAgain = placeTemplates(root, { skipExisting: true, components: ["multi-repo"] });
     assert.deepEqual(placedAgain, []);
     assert.equal(readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
+  } finally {
+    cleanup(root);
+  }
+});
+
+const NODE_FEATURE = "ghcr.io/devcontainers/features/node:1";
+
+function devcontainerOf(root) {
+  return JSON.parse(readFileSync(path.join(root, ".devcontainer", "devcontainer.json"), "utf8"));
+}
+
+test("adopt: the devcontainer component is opt-in and pins Node to the project's .nvmrc", () => {
+  const plain = fixture("no-devcontainer");
+  const root = fixture("devcontainer");
+  try {
+    adopt(plain);
+    assert.ok(!existsSync(path.join(plain, ".devcontainer")));
+
+    adopt(root, { components: ["devcontainer"] });
+    const config = devcontainerOf(root);
+    const nvmrc = readFileSync(path.join(HARNESS_ROOT, "templates", "nvmrc"), "utf8").trim();
+    assert.deepEqual(config.features[NODE_FEATURE], { version: nvmrc });
+    assert.ok("ghcr.io/anthropics/devcontainer-features/claude-code:1" in config.features);
+    assert.equal(config.postCreateCommand, "bash .devcontainer/post-create.sh");
+    // A fresh adopter is detected as node (the harness package.json), which needs no extra toolchain.
+    assert.equal(Object.keys(config.features).filter((id) => id.includes("/python:") || id.includes("/go:")).length, 0);
+
+    const postCreate = readFileSync(path.join(root, ".devcontainer", "post-create.sh"), "utf8");
+    assert.ok(postCreate.startsWith("#!/bin/bash\n"));
+    assert.match(postCreate, /npm install -g @openai\/codex @google\/gemini-cli/);
+    assert.match(postCreate, /\.\/init\.sh/);
+    assert.match(postCreate, /bash \.devcontainer\/register-mcp\.sh/);
+    assert.ok(existsSync(path.join(root, ".devcontainer", "register-mcp.sh")));
+  } finally {
+    cleanup(plain);
+    cleanup(root);
+  }
+});
+
+test("adopt: the devcontainer gets the toolchain feature of the product already in the target", () => {
+  const cases = [
+    ["pyproject.toml", "ghcr.io/devcontainers/features/python:1", {}],
+    ["go.mod", "ghcr.io/devcontainers/features/go:1", {}],
+    ["Cargo.toml", "ghcr.io/devcontainers/features/rust:1", {}],
+    ["pom.xml", "ghcr.io/devcontainers/features/java:1", { installMaven: "true" }],
+    ["build.gradle.kts", "ghcr.io/devcontainers/features/java:1", { installGradle: "true" }],
+    ["app.csproj", "ghcr.io/devcontainers/features/dotnet:2", {}],
+  ];
+  for (const [marker, feature, options] of cases) {
+    const root = fixture(`devcontainer-${marker.replace(/\W/g, "")}`);
+    try {
+      writeFileSync(path.join(root, marker), "", "utf8");
+      adopt(root, { skipExisting: true, components: ["devcontainer"] });
+      assert.deepEqual(devcontainerOf(root).features[feature], options, marker);
+    } finally {
+      cleanup(root);
+    }
+  }
+});
+
+test("adopt: activating the devcontainer later never rewrites one the adopter already edited", () => {
+  const root = fixture("devcontainer-edited");
+  try {
+    adopt(root, { skipExisting: true, components: ["devcontainer"] });
+    const file = path.join(root, ".devcontainer", "devcontainer.json");
+    const edited = `${JSON.stringify({ name: "mine", image: "custom", features: {} }, null, 2)}\n`;
+    writeFileSync(file, edited, "utf8");
+    writeFileSync(path.join(root, "pyproject.toml"), "", "utf8");
+    adopt(root, { skipExisting: true, components: ["devcontainer"] });
+    assert.equal(readFileSync(file, "utf8"), edited);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("adopt: the mcp component is opt-in and gives Claude Code and Gemini the same servers", () => {
+  const plain = fixture("no-mcp");
+  const root = fixture("mcp");
+  try {
+    adopt(plain);
+    assert.ok(!existsSync(path.join(plain, ".mcp.json")));
+    assert.ok(!existsSync(path.join(plain, ".gemini")));
+
+    adopt(root, { components: ["mcp"] });
+    const claude = JSON.parse(readFileSync(path.join(root, ".mcp.json"), "utf8"));
+    const gemini = JSON.parse(readFileSync(path.join(root, ".gemini", "settings.json"), "utf8"));
+    assert.deepEqual(claude.mcpServers.context7, { command: "npx", args: ["-y", "@upstash/context7-mcp"] });
+    assert.deepEqual(gemini.mcpServers, claude.mcpServers);
+    // The mcp component alone brings no dev container.
+    assert.ok(!existsSync(path.join(root, ".devcontainer")));
+  } finally {
+    cleanup(plain);
+    cleanup(root);
+  }
+});
+
+// register-mcp.sh is bash; on Windows `bash` may resolve to WSL, which cannot see this
+// fixture's paths, so the run is left to the Linux CI job.
+test("register-mcp.sh registers every command server in .mcp.json with codex", { skip: process.platform === "win32" }, () => {
+  const root = fixture("register-mcp");
+  try {
+    adopt(root, { components: ["devcontainer", "mcp"] });
+    const bin = path.join(root, "fake-bin");
+    mkdirSync(bin);
+    const log = path.join(root, "codex-calls.txt");
+    writeFileSync(path.join(bin, "codex"), `#!/bin/bash\necho "$*" >> "${log}"\n`, { mode: 0o755 });
+    const config = JSON.parse(readFileSync(path.join(root, ".mcp.json"), "utf8"));
+    config.mcpServers.remote = { type: "http", url: "https://example.invalid/mcp" };
+    writeFileSync(path.join(root, ".mcp.json"), JSON.stringify(config), "utf8");
+
+    const result = spawnSync("bash", [".devcontainer/register-mcp.sh"], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+    });
+    assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+    assert.equal(readFileSync(log, "utf8"), "mcp add context7 -- npx -y @upstash/context7-mcp\n");
   } finally {
     cleanup(root);
   }
