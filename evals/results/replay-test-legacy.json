@@ -1,0 +1,57 @@
+{
+  "task": "replay",
+  "n": 100,
+  "actions": {
+    "summary": 67,
+    "answer": 11,
+    "duplicate": 20,
+    "needs_info": 2
+  },
+  "action_agreement": {
+    "n": 76,
+    "rate": 0.1974
+  },
+  "duplicate_target_agreement": {
+    "n": 29,
+    "rate": 0.1034
+  },
+  "type_agreement": {
+    "n": 83,
+    "rate": 0.6506
+  },
+  "actions_with_summary_fallback": {
+    "n": 100,
+    "macro_f1": 0.299,
+    "accuracy": 0.35,
+    "recall": {
+      "duplicate": 0.2759,
+      "answer": 0.2609,
+      "needs_info": 0.0417,
+      "summary": 0.8333
+    },
+    "precision": {
+      "duplicate": 0.4,
+      "answer": 0.5455,
+      "needs_info": 0.5,
+      "summary": 0.2985
+    }
+  },
+  "action_recall_by_maintainer_action": {
+    "answer": {
+      "n": 23,
+      "rate": 0.2609
+    },
+    "duplicate": {
+      "n": 29,
+      "rate": 0.2759
+    },
+    "needs_info": {
+      "n": 24,
+      "rate": 0.0417
+    }
+  },
+  "repository": "astral-sh/uv",
+  "split": "test",
+  "sample_seed": 7,
+  "routing": "legacy"
+}

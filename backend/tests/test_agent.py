@@ -114,7 +114,7 @@ def test_scoped_nodes_see_only_declared_keys_and_write_only_declared_keys() -> N
 def test_every_node_declares_a_narrow_context() -> None:
     specs = {spec.name: spec for spec in build_nodes(deps("bug"))}
 
-    assert specs["decide"].reads == ("triage", "retrieval", "body")
+    assert specs["decide"].reads == ("triage", "retrieval", "title", "body")
     assert "title" not in specs["draft_duplicate"].reads
     assert specs["human_gate"].reads == ("proposal",)
     assert all(spec.writes and len(spec.writes) == 1 for spec in specs.values())

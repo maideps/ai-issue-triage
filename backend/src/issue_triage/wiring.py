@@ -3,6 +3,7 @@
 import subprocess
 from collections.abc import Mapping
 from contextlib import ExitStack
+from pathlib import Path
 from threading import Lock
 
 import joblib
@@ -34,6 +35,7 @@ from issue_triage.services.live import LiveIntake
 from issue_triage.services.llm import CallLedger, LLMClient, ModelRouter
 from issue_triage.services.query_rewrite import QueryRewriter
 from issue_triage.services.review_queue import ReviewQueue
+from issue_triage.services.routing import NeedsInfoModel, RoutingPolicy
 from issue_triage.services.tracing import Tracer
 from issue_triage.services.triage import Triager
 
@@ -68,8 +70,15 @@ def build_llm_client(
     return LLMClient(provider, router, ledger)
 
 
+def model_path(settings: Settings, repository: str, name: str) -> Path:
+    return settings.data_dir / "models" / f"{repository.replace('/', '__')}-{name}"
+
+
 def build_agent_deps(
-    settings: Settings, repository: str, tracer: Tracer | None = None
+    settings: Settings,
+    repository: str,
+    tracer: Tracer | None = None,
+    routing: str = "calibrated",
 ) -> AgentDeps:
     """Everything the triage graph needs, on the configured models and databases."""
     sessions = make_sessions(make_engine(settings.database_url))
@@ -90,10 +99,21 @@ def build_agent_deps(
         llm, DocRetriever(embedder, PostgresChunkRepository(sessions), repository)
     )
     # The trained classifier handles confident cases when `eval-decision` has saved one (D-012).
-    model_path = settings.data_dir / "models" / f"{repository.replace('/', '__')}-type.joblib"
+    type_model = model_path(settings, repository, "type.joblib")
     triager: Classifier = Triager(llm)
-    if model_path.exists():
-        triager = EscalatingTriager(joblib.load(model_path), embedder.embed, Triager(llm))
+    if type_model.exists():
+        triager = EscalatingTriager(joblib.load(type_model), embedder.embed, Triager(llm))
+    policy = needs_info = None
+    if routing == "calibrated":
+        # Written by `calibrate-routing` (D-015); without them the legacy rules apply.
+        policy = RoutingPolicy.load(model_path(settings, repository, "routing.json"))
+        needs_info_file = model_path(settings, repository, "needs-info.joblib")
+        if needs_info_file.exists():
+            model: NeedsInfoModel = joblib.load(needs_info_file)
+
+            def needs_info(title: str, body: str) -> float:
+                return model.probability(embedder.embed([issue_query(title, body)]))[0]
+
     return AgentDeps(
         triager=triager,
         finder=finder,
@@ -101,6 +121,8 @@ def build_agent_deps(
         embed=embedder.embed,
         candidate_text=texts.get,
         tracer=tracer,
+        routing=policy,
+        needs_info=needs_info,
     )
 
 

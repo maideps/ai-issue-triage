@@ -12,6 +12,16 @@ Metric summaries only (no issue text, D-003). Each file records the prompt versi
 
 Per class F1 for the keyword baseline: bug 0.68 (619 issues), enhancement 0.64 (457), question 0.47 (426), other 0.32 (41).
 
+## Calibrated routing (feat-021, D-015)
+
+Policy chosen on 199 issues from the newest 15% of the train split ([routing-calibration.json](routing-calibration.json): legacy macro-F1 0.313, calibrated 0.405), then the same 100 test issues replayed with both:
+
+| 100 test issues | Hand-written rules | Calibrated |
+|---|---|---|
+| Macro-F1 over the four actions | [0.299](replay-test-legacy.json) | [0.360](replay-test.json) |
+| Same action as maintainers | 0.197 | 0.250 |
+| Recall: duplicate / answer / needs-info / summary | 0.28 / 0.26 / 0.04 / 0.83 | 0.28 / 0.26 / 0.21 / 0.79 |
+
 ## End-to-end replay (feat-015, D-013)
 
 The whole agent on 100 test-split issues (25 duplicates, 25 needs-info, 25 answered questions, 25 other types), compared with what maintainers did.
@@ -23,7 +33,7 @@ The whole agent on 100 test-split issues (25 duplicates, 25 needs-info, 25 answe
 | Asked for a reproducible example | 0.042 | 24 |
 | All with a known action | 0.197 | 76 |
 
-Type agreement 0.651 (n=83). The agent chose summary for 67 of 100 issues. File: [replay-test.json](replay-test.json). The components are stronger than the system: the rule-based `decide` step needs calibration on the train split.
+Type agreement 0.651 (n=83). The agent chose summary for 67 of 100 issues. File: [replay-test-legacy.json](replay-test-legacy.json) (these hand-written-rule numbers; `replay-test.json` now holds the calibrated run). The components are stronger than the system, which led to the calibration above.
 
 ## Decision model for type triage (feat-013, D-012)
 

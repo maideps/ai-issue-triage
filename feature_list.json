@@ -7,9 +7,21 @@
       "verification": "Hitting /health returns 200 in a test; npm run lint, typecheck and test run the backend tools and pass.",
       "dependencies": [],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -17,11 +29,25 @@
       "name": "GitHub issue ingestion",
       "behavior": "A resumable, rate-limit-aware command that fetches a target repository's issues with labels, state reason, duplicateOf link and comments through the GitHub GraphQL API into a git-ignored local store, pseudonymizing usernames, behind an issue-source adapter interface.",
       "verification": "Tests with recorded API responses cover pagination, resume and pseudonymization; a run against astral-sh/uv stores issues locally.",
-      "dependencies": ["feat-001"],
+      "dependencies": [
+        "feat-001"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -29,11 +55,25 @@
       "name": "Issue domain model and persistence",
       "behavior": "Issue, comment, label and duplicate-link entities in the domain layer, PostgreSQL persistence with migrations, and a loader that imports the ingested issues.",
       "verification": "Repository tests run against a test database; the loader imports a recorded sample idempotently.",
-      "dependencies": ["feat-002"],
+      "dependencies": [
+        "feat-002"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -41,11 +81,25 @@
       "name": "Ground-truth datasets with time split",
       "behavior": "Builders that derive the four evaluation sets (type labels, time-valid duplicate pairs, question to maintainer answer, needs-info) with an as-of timestamp per case, plus a committed golden sample of 50 hand-checked issues.",
       "verification": "Tests prove no case references data newer than its as-of timestamp and that newer-original duplicate pairs are excluded; dataset statistics are printed.",
-      "dependencies": ["feat-003"],
+      "dependencies": [
+        "feat-003"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -53,11 +107,25 @@
       "name": "LLM provider layer",
       "behavior": "A provider interface with a LiteLLM implementation and a deterministic fake, Pydantic structured output, versioned prompt templates, and per-call token, cost and latency accounting.",
       "verification": "Tests use the fake provider only; switching the model per step is a settings change covered by a test.",
-      "dependencies": ["feat-001"],
+      "dependencies": [
+        "feat-001"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -65,11 +133,25 @@
       "name": "Input and output guardrails",
       "behavior": "Issue text is treated as untrusted input: secrets and emails in pasted logs are redacted, prompt-injection attempts are flagged, and every model output is validated against its schema before use.",
       "verification": "Tests cover redaction, injection flags and rejection of invalid model output.",
-      "dependencies": ["feat-005"],
+      "dependencies": [
+        "feat-005"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -77,11 +159,26 @@
       "name": "LLM triage baseline and eval runner",
       "behavior": "An LLM classifies an issue as bug, question, enhancement or other with a confidence; an eval runner scores it on the type dataset (macro-F1, per-class F1, cost, latency p50/p95) and writes a results summary under evals/results/.",
       "verification": "The runner works end to end with the fake provider in tests; a real-model run's summary is committed.",
-      "dependencies": ["feat-004", "feat-006"],
+      "dependencies": [
+        "feat-004",
+        "feat-006"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -89,11 +186,26 @@
       "name": "Docs ingestion and chunking in pgvector",
       "behavior": "The target's Markdown docs are chunked by heading, embedded and stored in pgvector with an HNSW index; a report compares at least two chunking strategies on retrieval quality.",
       "verification": "Tests cover the chunkers; the comparison report is committed under evals/results/.",
-      "dependencies": ["feat-003", "feat-005"],
+      "dependencies": [
+        "feat-003",
+        "feat-005"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -101,11 +213,26 @@
       "name": "Hybrid duplicate search",
       "behavior": "Similar-issue search combining vector and keyword (BM25) retrieval with reciprocal rank fusion, filtered to items created before the as-of timestamp, scored with recall@k and MRR on the duplicate pairs.",
       "verification": "Tests prove the as-of filter; the eval summary compares vector-only, keyword-only and hybrid.",
-      "dependencies": ["feat-004", "feat-008"],
+      "dependencies": [
+        "feat-004",
+        "feat-008"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -113,11 +240,25 @@
       "name": "Reranking and query transformation",
       "behavior": "A cross-encoder reranks the top 20 candidates and the issue is reformulated into search queries before retrieval; the gain over feat-009 is measured.",
       "verification": "The eval summary reports recall@k and MRR before and after, with added latency and cost.",
-      "dependencies": ["feat-009"],
+      "dependencies": [
+        "feat-009"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -125,11 +266,25 @@
       "name": "Doc-grounded answer drafting",
       "behavior": "For question issues, a draft reply cites the doc sections it relies on; RAGAS faithfulness and answer relevancy plus an LLM judge against the real maintainer reply score it.",
       "verification": "Tests check citations point at retrieved chunks; the eval summary is committed and runs in CI on the cached set.",
-      "dependencies": ["feat-010"],
+      "dependencies": [
+        "feat-010"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -137,11 +292,26 @@
       "name": "Agent orchestration with a human gate",
       "behavior": "A LangGraph flow (guardrails, triage, retrieval, action choice among duplicate, answer, needs-info and bug summary) with typed schemas between nodes, a Postgres checkpointer and an interrupt where a maintainer approves, edits or rejects.",
       "verification": "Tests resume a run after a simulated failure and after approval; each node receives only its declared context.",
-      "dependencies": ["feat-007", "feat-011"],
+      "dependencies": [
+        "feat-007",
+        "feat-011"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -149,11 +319,26 @@
       "name": "Triage decision model",
       "behavior": "A small classifier trained on older labelled issues (embeddings plus a linear model) handles type triage and escalates to the LLM below a confidence threshold; F1, cost and latency are compared with the LLM baseline.",
       "verification": "The eval summary compares classifier, LLM and the escalating combination on a time-split test set.",
-      "dependencies": ["feat-007", "feat-008"],
+      "dependencies": [
+        "feat-007",
+        "feat-008"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -161,11 +346,25 @@
       "name": "Review queue UI",
       "behavior": "A React + TypeScript app listing pending suggestions and showing each draft beside its evidence and confidence, with approve, edit and reject actions recorded as feedback.",
       "verification": "Component and end-to-end tests cover the queue, the detail view and the three actions.",
-      "dependencies": ["feat-012"],
+      "dependencies": [
+        "feat-012"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -173,11 +372,25 @@
       "name": "Replay mode",
       "behavior": "Any historical issue can be replayed as of its creation date and the suggestion is shown side by side with what the maintainers actually did.",
       "verification": "An end-to-end test replays a recorded issue and shows both outcomes.",
-      "dependencies": ["feat-014"],
+      "dependencies": [
+        "feat-014"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -185,11 +398,25 @@
       "name": "Sandbox live mode",
       "behavior": "A GitHub webhook from the author's sandbox repository feeds new issues into the queue; approved replies are posted only to repositories on a configured allowlist.",
       "verification": "Tests prove a non-allowlisted repository is refused; a manual run on the sandbox posts an approved reply.",
-      "dependencies": ["feat-014"],
+      "dependencies": [
+        "feat-014"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -197,11 +424,25 @@
       "name": "Observability and KPI view",
       "behavior": "Traces per step and per model call with cost, and a KPI view showing triage F1, duplicate recall, approval rate, escalation rate, cost per issue and latency p50/p95.",
       "verification": "Tests cover metric aggregation; docs/OBSERVABILITY.md describes the traces and KPIs.",
-      "dependencies": ["feat-012"],
+      "dependencies": [
+        "feat-012"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -209,11 +450,27 @@
       "name": "Docker Compose and CI with evals",
       "behavior": "One-command local stack with docker compose using the fake provider by default, and a GitHub Actions workflow running the harness check plus the cached evaluation suite.",
       "verification": "docker compose up serves the UI on a fresh clone; CI is green.",
-      "dependencies": ["feat-015", "feat-016", "feat-017"],
+      "dependencies": [
+        "feat-015",
+        "feat-016",
+        "feat-017"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -221,11 +478,25 @@
       "name": "MCP server for search tools",
       "behavior": "An MCP server exposes similar-issue search and docs search as tools any agent can call, respecting the same as-of filters.",
       "verification": "Tests call both tools through an MCP client.",
-      "dependencies": ["feat-010"],
+      "dependencies": [
+        "feat-010"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
       ]
     },
     {
@@ -233,11 +504,52 @@
       "name": "README, diagram and demo",
       "behavior": "Architecture diagram, eval results table, screenshots or GIF, design-decisions section and a five-minute run guide in the README.",
       "verification": "A fresh clone followed step by step reproduces the demo; every number in the README links to its eval summary.",
-      "dependencies": ["feat-018", "feat-019"],
+      "dependencies": [
+        "feat-018",
+        "feat-019"
+      ],
       "layers": [
-        { "label": "Layer 1: Static checks", "cmd": "npm run lint", "repair": "Fix static-analysis errors and rerun the layer command." },
-        { "label": "Layer 2: Runtime tests", "cmd": "npm run test", "repair": "Fix failing tests and rerun the layer command." },
-        { "label": "Layer 3: System confirmation", "cmd": "npm run check", "repair": "Resolve remaining issues and rerun full verification." }
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis errors and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve remaining issues and rerun full verification."
+        }
+      ]
+    },
+    {
+      "id": "feat-021",
+      "name": "Routing calibration",
+      "behavior": "The agent's decide step uses a trained needs-info classifier and a duplicate threshold calibrated on the newest slice of the train split instead of hand-written rules; the test replay is rerun and compared.",
+      "verification": "Tests cover the routing policy, the needs-info model and the calibration search; calibration and replay summaries are committed.",
+      "dependencies": [
+        "feat-015"
+      ],
+      "layers": [
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis issues and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve cross-layer issues and rerun full verification."
+        }
       ]
     }
   ]

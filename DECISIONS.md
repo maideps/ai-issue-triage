@@ -186,7 +186,7 @@ This file records significant architectural decisions, their context, alternativ
 ### D-013: Replay mode compares with maintainers; the decision rules need calibration
 
 **Date:** 2026-10-30
-**Status:** accepted (follow-up open: calibrate `decide` on the train split)
+**Status:** accepted; the calibration follow-up is D-015
 **Context:** feat-015 shows each suggestion beside what maintainers did: final type label, duplicate link, needs-info label and first maintainer reply. That information is from after `as_of`, so it is displayed and compared but never passed to the agent (D-004). `eval-replay` ran the whole agent on 100 test-split issues (25 each: duplicates, needs-info, answered questions, other types; seed 7).
 **Decision:** Ship replay mode with per-aspect agreement (action, duplicate target, type) and publish the end-to-end baseline as is: action agreement 0.197 over 76 issues with a known maintainer action; by maintainer action, duplicate 0.276 (n=29, correct target 0.103), answer 0.261 (n=23), needs-info 0.042 (n=24); type agreement 0.651 (n=83). The agent chose summary for 67 of 100 issues.
 **Alternatives considered:**
@@ -208,3 +208,16 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: the only way to post is approval plus allowlist plus not-the-target, each covered by tests.
 - Negative: the sandbox run against a real GitHub repository needs the author's go-ahead (it creates a repository and posts a comment) and has not been done; the automated tests use a recording poster.
+
+### D-015: Calibrated routing: a needs-info classifier and tuned thresholds
+
+**Date:** 2026-11-01
+**Status:** accepted
+**Context:** D-013 located the system's weak spot in `decide`: the hand-written needs-info rule almost never fired (test recall 0.04) and summary absorbed two thirds of issues. The decision stays code (D-011), but its thresholds can be learned.
+**Decision:** Routing is a `RoutingPolicy` (duplicate threshold, needs-info threshold, which triage labels can need information, whether asking for information comes before answering). "Needs information" is a logistic regression on the issue embedding trained on maintainers' `needs-mre` labels. Method as in D-012: models are fit on the oldest 85% of the train split; the policy is chosen by grid search (256 policies, objective macro-F1 over duplicate / needs-info / answer / summary) on a stratified sample of the newest 15% (199 issues: 42 duplicates, 37 needs-info, 60 answered questions, 60 summaries); production models are then refit on the whole train split. Chosen: duplicate threshold 0.8 (unchanged; lower thresholds did not help), needs-info probability at least 0.7 for any type, asked before answering. Validation macro-F1: legacy 0.313, calibrated 0.405. Test replay (same 100 issues as D-013): macro-F1 0.299 to 0.360, action agreement 0.197 to 0.250, needs-info recall 0.04 to 0.21, duplicate and answer recall unchanged (0.28, 0.26), summary recall 0.83 to 0.79.
+**Alternatives considered:**
+- Tuning on the test replay — Rejected: leakage.
+- An LLM router — Rejected for the same reasons as in D-011.
+**Consequences:**
+- Positive: a measured gain on unseen issues, and the routing is now data-driven and re-tunable with `calibrate-routing`.
+- Negative: the remaining gap sits upstream: duplicate recall is limited by retrieval similarity and answer recall by triage recognising questions; summary recall dropped slightly as needs-info started firing.

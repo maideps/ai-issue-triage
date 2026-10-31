@@ -36,9 +36,9 @@ Every number links to the summary file it comes from. All evaluations are **time
 | Duplicate detection, 319 pairs | The original they linked | Recall@10 **[0.527](evals/results/rerank-all.json)**, MRR@10 [0.278](evals/results/rerank-all.json) (hybrid search + query rewriting) | Vector only [0.398](evals/results/duplicates-all.json), BM25 only [0.401](evals/results/duplicates-all.json) |
 | Doc retrieval, 50 test questions | The docs page they linked when answering | MRR **[0.305](evals/results/chunking-test.json)** with heading chunks | Fixed windows [0.290](evals/results/chunking-test.json) |
 | Doc-grounded answers, 370 test questions | Their first reply | Citation validity **[1.00](evals/results/answers-test.json)**, lexical faithfulness [0.71](evals/results/answers-test.json), same docs page as the maintainer in [24%](evals/results/answers-test.json) | Fake extractive drafter ([D-010](DECISIONS.md#d-010-native-llm-free-answer-metrics-until-a-judge-model-is-configured)) |
-| Whole agent, 100 replayed test issues | Their action (duplicate, answer, ask for a repro) | Same action **[20%](evals/results/replay-test.json)**, same type [65%](evals/results/replay-test.json) | The weak spot: rule-based routing ([D-013](DECISIONS.md#d-013-replay-mode-compares-with-maintainers-the-decision-rules-need-calibration)) |
+| Whole agent, 100 replayed test issues | Their action (duplicate, answer, ask for a repro) | Same action **[25%](evals/results/replay-test.json)**, macro-F1 over the four actions [0.360](evals/results/replay-test.json) with calibrated routing | Hand-written rules: [20%](evals/results/replay-test-legacy.json), [0.299](evals/results/replay-test-legacy.json) ([D-015](DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds)) |
 
-Two results worth reading in full: a general-purpose cross-encoder reranker **lowered** duplicate recall@10 to [0.455](evals/results/rerank-all.json) at five times the latency, so it ships disabled ([D-009](DECISIONS.md#d-009-query-rewriting-on-cross-encoder-reranking-off-for-duplicate-search)); and the components score well while the end-to-end agent agrees with maintainers on only a fifth of actions, which locates the next piece of work precisely. More detail in [`evals/results/`](evals/results/README.md).
+Two results worth reading in full: a general-purpose cross-encoder reranker **lowered** duplicate recall@10 to [0.455](evals/results/rerank-all.json) at five times the latency, so it ships disabled ([D-009](DECISIONS.md#d-009-query-rewriting-on-cross-encoder-reranking-off-for-duplicate-search)); and the components score well while the end-to-end agent agreed with maintainers on only a fifth of actions. Calibrating the routing on the train split lifted that to a quarter; what is left sits upstream, in duplicate retrieval and in recognising questions. More detail in [`evals/results/`](evals/results/README.md).
 
 ![Replay of #17846: the agent proposed duplicate #17791, maintainers linked #17711; agreement badges show action matches, target differs](docs/images/replay.png)
 
@@ -51,7 +51,7 @@ flowchart LR
     direction LR
     guard["guardrails<br/>redact · fence · flag"] --> triage["triage<br/>classifier → LLM if unsure"]
     triage --> retrieve["retrieve<br/>hybrid search + query rewrite"]
-    retrieve --> decide{"decide<br/>(rules, no LLM)"}
+    retrieve --> decide{"decide<br/>calibrated policy, no LLM"}
     decide --> draft["draft<br/>duplicate · answer · needs-info · summary"]
     draft --> gate["human gate<br/>interrupt()"]
   end
@@ -81,13 +81,14 @@ flowchart LR
 | [D-011](DECISIONS.md#d-011-one-langgraph-flow-rule-based-routing-a-human-gate-on-every-proposal) | One agent graph, rule-based routing, a human gate on every proposal |
 | [D-012](DECISIONS.md#d-012-a-trained-classifier-triages-first-and-escalates-to-the-llm-below-05-confidence) | A trained classifier triages first and escalates when unsure |
 | [D-013](DECISIONS.md#d-013-replay-mode-compares-with-maintainers-the-decision-rules-need-calibration) | Replay against maintainers; the routing rules need calibration |
+| [D-015](DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds) | Calibrated routing: a needs-info classifier and thresholds tuned on the train split |
 
 All decisions, with context and alternatives: [DECISIONS.md](DECISIONS.md).
 
 ## Known limitations
 
 - **No real model has run yet.** The LLM steps run on deterministic fakes; to run real models, set a provider key and map steps in `ISSUE_TRIAGE_LLM_MODELS` (see [`backend/.env.example`](backend/.env.example)), then rerun the evaluations.
-- **The routing rules are uncalibrated.** End-to-end action agreement is 20%; the needs-info rule and the 0.8 duplicate threshold should be tuned on the train split (D-013).
+- **End-to-end agreement is still modest.** After calibration (D-015) the agent picks the maintainers' action 25% of the time; duplicate recall is limited by retrieval and answer recall by triage recognising questions.
 - **Live mode has not been run against a real sandbox**, only with a recording publisher in tests (D-014).
 - **The golden sample's labels** are the maintainers', checked against titles by the author's assistant; a human review is still pending ([`evals/datasets/`](evals/datasets/README.md)).
 

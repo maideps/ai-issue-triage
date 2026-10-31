@@ -1,0 +1,343 @@
+{
+  "task": "routing-calibration",
+  "repository": "astral-sh/uv",
+  "validation_window": [
+    "2025-06-10T02:39:26+00:00",
+    "2025-09-12T07:10:14+00:00"
+  ],
+  "validation_counts": {
+    "duplicate": 42,
+    "needs_info": 37,
+    "answer": 60,
+    "summary": 60
+  },
+  "objective": "macro-F1 over duplicate / needs_info / answer / summary",
+  "legacy_rules": {
+    "n": 199,
+    "macro_f1": 0.3127,
+    "accuracy": 0.397,
+    "recall": {
+      "duplicate": 0.2381,
+      "answer": 0.4333,
+      "needs_info": 0.0,
+      "summary": 0.7167
+    },
+    "precision": {
+      "duplicate": 0.2703,
+      "answer": 0.65,
+      "needs_info": 0.0,
+      "summary": 0.3583
+    }
+  },
+  "chosen_policy": {
+    "duplicate_threshold": 0.8,
+    "needs_info_threshold": 0.7,
+    "needs_info_labels": [
+      "bug",
+      "question",
+      "enhancement",
+      "other"
+    ],
+    "needs_info_first": true
+  },
+  "chosen": {
+    "n": 199,
+    "macro_f1": 0.4045,
+    "accuracy": 0.4271,
+    "recall": {
+      "duplicate": 0.2381,
+      "answer": 0.4,
+      "needs_info": 0.3243,
+      "summary": 0.65
+    },
+    "precision": {
+      "duplicate": 0.2703,
+      "answer": 0.7059,
+      "needs_info": 0.4138,
+      "summary": 0.3939
+    }
+  },
+  "top_policies": [
+    {
+      "policy": {
+        "duplicate_threshold": 0.8,
+        "needs_info_threshold": 0.7,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.4045,
+      "accuracy": 0.4271,
+      "recall": {
+        "duplicate": 0.2381,
+        "answer": 0.4,
+        "needs_info": 0.3243,
+        "summary": 0.65
+      },
+      "precision": {
+        "duplicate": 0.2703,
+        "answer": 0.7059,
+        "needs_info": 0.4138,
+        "summary": 0.3939
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.9,
+        "needs_info_threshold": 0.7,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.3982,
+      "accuracy": 0.4774,
+      "recall": {
+        "duplicate": 0.0238,
+        "answer": 0.4833,
+        "needs_info": 0.4054,
+        "summary": 0.8333
+      },
+      "precision": {
+        "duplicate": 1.0,
+        "answer": 0.7073,
+        "needs_info": 0.4545,
+        "summary": 0.4032
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.8,
+        "needs_info_threshold": 0.6,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.3966,
+      "accuracy": 0.4121,
+      "recall": {
+        "duplicate": 0.2381,
+        "answer": 0.4,
+        "needs_info": 0.3784,
+        "summary": 0.5667
+      },
+      "precision": {
+        "duplicate": 0.2703,
+        "answer": 0.7273,
+        "needs_info": 0.3333,
+        "summary": 0.3908
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.85,
+        "needs_info_threshold": 0.6,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.3963,
+      "accuracy": 0.4523,
+      "recall": {
+        "duplicate": 0.0476,
+        "answer": 0.4667,
+        "needs_info": 0.4865,
+        "summary": 0.7
+      },
+      "precision": {
+        "duplicate": 0.25,
+        "answer": 0.7179,
+        "needs_info": 0.3913,
+        "summary": 0.3962
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.9,
+        "needs_info_threshold": 0.6,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.3959,
+      "accuracy": 0.4673,
+      "recall": {
+        "duplicate": 0.0238,
+        "answer": 0.4667,
+        "needs_info": 0.5135,
+        "summary": 0.75
+      },
+      "precision": {
+        "duplicate": 1.0,
+        "answer": 0.7179,
+        "needs_info": 0.3878,
+        "summary": 0.4091
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.8,
+        "needs_info_threshold": 0.5,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": false
+      },
+      "n": 199,
+      "macro_f1": 0.3937,
+      "accuracy": 0.407,
+      "recall": {
+        "duplicate": 0.2381,
+        "answer": 0.4333,
+        "needs_info": 0.4054,
+        "summary": 0.5
+      },
+      "precision": {
+        "duplicate": 0.2703,
+        "answer": 0.65,
+        "needs_info": 0.3191,
+        "summary": 0.4
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.85,
+        "needs_info_threshold": 0.7,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": true
+      },
+      "n": 199,
+      "macro_f1": 0.3935,
+      "accuracy": 0.4573,
+      "recall": {
+        "duplicate": 0.0476,
+        "answer": 0.4667,
+        "needs_info": 0.3784,
+        "summary": 0.7833
+      },
+      "precision": {
+        "duplicate": 0.25,
+        "answer": 0.7,
+        "needs_info": 0.4516,
+        "summary": 0.3917
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.8,
+        "needs_info_threshold": 0.4,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": false
+      },
+      "n": 199,
+      "macro_f1": 0.3934,
+      "accuracy": 0.402,
+      "recall": {
+        "duplicate": 0.2381,
+        "answer": 0.4333,
+        "needs_info": 0.5135,
+        "summary": 0.4167
+      },
+      "precision": {
+        "duplicate": 0.2703,
+        "answer": 0.65,
+        "needs_info": 0.3065,
+        "summary": 0.4167
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.9,
+        "needs_info_threshold": 0.6,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": false
+      },
+      "n": 199,
+      "macro_f1": 0.3914,
+      "accuracy": 0.4673,
+      "recall": {
+        "duplicate": 0.0238,
+        "answer": 0.5167,
+        "needs_info": 0.4324,
+        "summary": 0.75
+      },
+      "precision": {
+        "duplicate": 1.0,
+        "answer": 0.6596,
+        "needs_info": 0.3902,
+        "summary": 0.4091
+      }
+    },
+    {
+      "policy": {
+        "duplicate_threshold": 0.8,
+        "needs_info_threshold": 0.7,
+        "needs_info_labels": [
+          "bug",
+          "question",
+          "enhancement",
+          "other"
+        ],
+        "needs_info_first": false
+      },
+      "n": 199,
+      "macro_f1": 0.391,
+      "accuracy": 0.4221,
+      "recall": {
+        "duplicate": 0.2381,
+        "answer": 0.4333,
+        "needs_info": 0.2432,
+        "summary": 0.65
+      },
+      "precision": {
+        "duplicate": 0.2703,
+        "answer": 0.65,
+        "needs_info": 0.3913,
+        "summary": 0.3939
+      }
+    }
+  ],
+  "grid_size": 256
+}

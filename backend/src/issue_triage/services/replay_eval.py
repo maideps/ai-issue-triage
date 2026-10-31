@@ -7,6 +7,8 @@ from typing import Any
 from issue_triage.domain.issues import Issue
 from issue_triage.domain.replay import agreement, maintainer_outcome
 from issue_triage.services.agent.runner import IssueInput, TriageAgent
+from issue_triage.services.calibration import expected_action
+from issue_triage.services.routing import action_report
 
 
 def _rate(values: Sequence[bool | None]) -> dict[str, Any]:
@@ -25,6 +27,8 @@ def evaluate_replay(
     action_matches: list[bool | None] = []
     target_matches: list[bool | None] = []
     type_matches: list[bool | None] = []
+    expected_all: list[str] = []
+    predicted_all: list[str] = []
     for index, issue in enumerate(issues, start=1):
         status = agent.start(
             IssueInput(issue.repository, issue.number, issue.title, issue.body, issue.created_at)
@@ -39,6 +43,10 @@ def evaluate_replay(
             status.triage.label if status.triage else None,
         )
         actions[status.proposal.action] += 1
+        full_expected = expected_action(issue)
+        if full_expected is not None:
+            expected_all.append(full_expected)
+            predicted_all.append(status.proposal.action)
         action_matches.append(verdict["action_matches"])
         target_matches.append(verdict["duplicate_target_matches"])
         type_matches.append(verdict["type_matches"])
@@ -55,6 +63,8 @@ def evaluate_replay(
         "action_agreement": _rate(action_matches),
         "duplicate_target_agreement": _rate(target_matches),
         "type_agreement": _rate(type_matches),
+        # Typed issues with no other recorded action count as expecting a summary.
+        "actions_with_summary_fallback": action_report(expected_all, predicted_all),
         "action_recall_by_maintainer_action": {
             expected: _rate(list(hits)) for expected, hits in sorted(by_expected.items())
         },

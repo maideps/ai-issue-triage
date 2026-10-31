@@ -101,6 +101,16 @@ In the UI, enter any uv issue number to replay it as of its creation date. The s
 node tools/py.mjs -m issue_triage eval-replay astral-sh/uv
 ```
 
+## Calibrate the routing
+
+```bash
+node tools/py.mjs -m issue_triage calibrate-routing astral-sh/uv            # policy + needs-info model into data/models/
+node tools/py.mjs -m issue_triage eval-replay astral-sh/uv --routing legacy  # compare with the hand-written rules
+node tools/py.mjs -m issue_triage eval-replay astral-sh/uv                   # calibrated (default when the files exist)
+```
+
+Models are fit on the oldest 85% of the train split, the policy is chosen on the newest 15%, and the test replay is only run afterwards ([D-015](../DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds)).
+
 ## Use the search tools from any agent (MCP)
 
 ```bash

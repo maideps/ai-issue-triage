@@ -11,10 +11,10 @@ After adding or updating a session note, regenerate this file with `node scripts
 - Primary startup command: `./init.sh`
 - Primary verification command: `make check` (make-free equivalent: `npm run check`)
 - Active feature: none
-- Passing features (20): feat-001 — FastAPI service skeleton, feat-002 — GitHub issue ingestion, feat-003 — Issue domain model and persistence, feat-004 — Ground-truth datasets with time split, feat-005 — LLM provider layer, feat-006 — Input and output guardrails, feat-007 — LLM triage baseline and eval runner, feat-008 — Docs ingestion and chunking in pgvector, feat-009 — Hybrid duplicate search, feat-010 — Reranking and query transformation, feat-011 — Doc-grounded answer drafting, feat-012 — Agent orchestration with a human gate, feat-013 — Triage decision model, feat-014 — Review queue UI, feat-015 — Replay mode, feat-016 — Sandbox live mode, feat-017 — Observability and KPI view, feat-018 — Docker Compose and CI with evals, feat-019 — MCP server for search tools, feat-020 — README, diagram and demo
+- Passing features (21): feat-001 — FastAPI service skeleton, feat-002 — GitHub issue ingestion, feat-003 — Issue domain model and persistence, feat-004 — Ground-truth datasets with time split, feat-005 — LLM provider layer, feat-006 — Input and output guardrails, feat-007 — LLM triage baseline and eval runner, feat-008 — Docs ingestion and chunking in pgvector, feat-009 — Hybrid duplicate search, feat-010 — Reranking and query transformation, feat-011 — Doc-grounded answer drafting, feat-012 — Agent orchestration with a human gate, feat-013 — Triage decision model, feat-014 — Review queue UI, feat-015 — Replay mode, feat-016 — Sandbox live mode, feat-017 — Observability and KPI view, feat-018 — Docker Compose and CI with evals, feat-019 — MCP server for search tools, feat-020 — README, diagram and demo, feat-021 — Routing calibration
 - Failing/blocked features: none
 - Planned features (0): none
-- Last evidence: feat-020 — README, diagram and demo — All verification layers passed via node scripts/framework-check.mjs verify-feature (SKIP reported in: Layer 2: Runtime tests, Layer 3: System confirmation) (2026-10-30T18:52:07.957Z)
+- Last evidence: feat-021 — Routing calibration — All verification layers passed via node scripts/framework-check.mjs verify-feature (SKIP reported in: Layer 2: Runtime tests, Layer 3: System confirmation) (2026-10-31T00:40:32.240Z)
 
 ## Session Index
 
@@ -42,4 +42,5 @@ After adding or updating a session note, regenerate this file with `node scripts
 - [Session 022 — 2026-11-01](progress/022-2026-11-01.md)
 - [Session 023 — 2026-11-01](progress/023-2026-11-01.md)
 - [Session 024 — 2026-10-30](progress/024-2026-10-30.md)
+- [Session 025 — 2026-11-01](progress/025-2026-11-01.md)
 <!-- END GENERATED PROGRESS -->

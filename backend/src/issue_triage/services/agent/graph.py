@@ -15,7 +15,7 @@ meantime and lets a failed run resume from its last completed node.
 
 import re
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -39,6 +39,8 @@ from issue_triage.services.agent.state import (
 from issue_triage.services.answers import DraftResult, chunk_id
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.guardrails import guard_input
+from issue_triage.services.routing import LEGACY, RoutingPolicy, RoutingSignals
+from issue_triage.services.routing import route as route_action
 from issue_triage.services.tracing import Tracer
 from issue_triage.services.triage import TriageDecision
 
@@ -81,6 +83,9 @@ class AgentDeps:
     duplicate_threshold: float = 0.8
     similar_k: int = 5
     tracer: Tracer | None = None
+    # Calibrated routing (D-015); None keeps the legacy rules with duplicate_threshold.
+    routing: RoutingPolicy | None = None
+    needs_info: Callable[[str, str], float] | None = None
 
 
 Node = Callable[[Mapping[str, Any]], dict[str, Any]]
@@ -155,20 +160,18 @@ def build_nodes(deps: AgentDeps) -> list[NodeSpec]:
         triage = TriageOut.model_validate(view["triage"])
         similar = RetrievalOut.model_validate(view["retrieval"]).similar
         best = max(similar, key=lambda s: s.similarity, default=None)
-        if best is not None and best.similarity >= deps.duplicate_threshold:
-            decision = Decision(
-                action="duplicate", reason=f"#{best.number} similarity {best.similarity}"
-            )
-        elif triage.label == "question":
-            decision = Decision(action="answer", reason="question: answer from the docs")
-        elif triage.label == "bug" and missing_info(view["body"]):
-            decision = Decision(
-                action="needs_info", reason="bug report without version or reproduction"
-            )
-        else:
-            decision = Decision(
-                action="summary", reason=f"{triage.label}: summarise for a maintainer"
-            )
+        policy = deps.routing or replace(LEGACY, duplicate_threshold=deps.duplicate_threshold)
+        signals = RoutingSignals(
+            triage_label=triage.label,
+            best_similarity=best.similarity if best else None,
+            best_number=best.number if best else None,
+            needs_info_probability=deps.needs_info(view["title"], view["body"])
+            if deps.needs_info is not None
+            else None,
+            missing_info=missing_info(view["body"]),
+        )
+        action, reason = route_action(signals, policy)
+        decision = Decision(action=action, reason=reason)
         return {"decision": decision.model_dump()}
 
     def flagged(view: Mapping[str, Any]) -> bool:
@@ -258,7 +261,7 @@ def build_nodes(deps: AgentDeps) -> list[NodeSpec]:
         NodeSpec("guard", issue, ("guard",), guard),
         NodeSpec("triage", issue, ("triage",), triage),
         NodeSpec("retrieve", (*issue, "number", "as_of"), ("retrieval",), retrieve),
-        NodeSpec("decide", ("triage", "retrieval", "body"), ("decision",), decide),
+        NodeSpec("decide", ("triage", "retrieval", "title", "body"), ("decision",), decide),
         NodeSpec("draft_duplicate", ("retrieval", "guard"), ("proposal",), draft_duplicate),
         NodeSpec("draft_answer", (*issue, "guard"), ("proposal",), draft_answer),
         NodeSpec("draft_needs_info", ("guard",), ("proposal",), draft_needs_info),

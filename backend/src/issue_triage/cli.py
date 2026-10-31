@@ -8,6 +8,7 @@ import json
 import random
 import sys
 import time
+from collections import Counter
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
@@ -42,13 +43,18 @@ from issue_triage.infrastructure.github_source import GitHubGraphQLSource, urlli
 from issue_triage.infrastructure.jsonl_store import JsonlIssueStore
 from issue_triage.infrastructure.keyword_index import Bm25IssueIndex
 from issue_triage.infrastructure.reranker import CrossEncoderReranker
-from issue_triage.services.agent.graph import build_graph
+from issue_triage.services.agent.graph import build_graph, missing_info
 from issue_triage.services.agent.runner import IssueInput, RunStatus, TriageAgent
 from issue_triage.services.agent.state import Review
 from issue_triage.services.answer_eval import Judge, evaluate_answers
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
+from issue_triage.services.calibration import collect_signals, stratified
 from issue_triage.services.datasets import build_datasets, select_golden
-from issue_triage.services.decision_model import EmbeddingClassifier, escalation_curve
+from issue_triage.services.decision_model import (
+    EmbeddingClassifier,
+    EscalatingTriager,
+    escalation_curve,
+)
 from issue_triage.services.docs_index import evaluate_doc_retrieval, index_docs, issue_query
 from issue_triage.services.duplicates import (
     RERANK_VARIANTS,
@@ -61,6 +67,14 @@ from issue_triage.services.ingestion import ingest_issues
 from issue_triage.services.loading import load_issues
 from issue_triage.services.query_rewrite import QUERY_REWRITE_STEP, QueryRewriter
 from issue_triage.services.replay_eval import evaluate_replay
+from issue_triage.services.routing import (
+    LEGACY,
+    NeedsInfoModel,
+    action_report,
+    calibrate,
+    policy_grid,
+)
+from issue_triage.services.routing import route as route_action
 from issue_triage.services.triage import Triager
 from issue_triage.wiring import (
     LazyReviewQueue,
@@ -319,6 +333,94 @@ def cmd_eval_decision(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_calibrate_routing(args: argparse.Namespace, settings: Settings) -> int:
+    """Fit models on the oldest 85% of the train split, pick the routing policy on the
+    newest 15%, then save production models trained on the whole train split (D-015)."""
+    repository = args.repository
+    issues_repo = issue_repository(settings)
+    types = sorted(
+        (
+            c
+            for c in read_cases(dataset_path(settings, repository, "type"), TypeCase)
+            if c.split == "train"
+        ),
+        key=lambda c: c.as_of,
+    )
+    needs = [
+        c
+        for c in read_cases(dataset_path(settings, repository, "needs_info"), NeedsInfoCase)
+        if c.split == "train"
+    ]
+    validation_start = types[int(len(types) * 0.85)].as_of
+    test_start = split_start(settings, repository)
+    vectors = vector_index(settings).vectors(
+        repository, sorted({c.number for c in types} | {c.number for c in needs})
+    )
+
+    def fit_models(before: datetime) -> tuple[EmbeddingClassifier, NeedsInfoModel]:
+        typed = [c for c in types if c.as_of < before and c.number in vectors]
+        info = [c for c in needs if c.as_of < before and c.number in vectors]
+        classifier = EmbeddingClassifier().fit(
+            [vectors[c.number] for c in typed], [c.label for c in typed]
+        )
+        model = NeedsInfoModel().fit(
+            [vectors[c.number] for c in info], [c.needs_info for c in info]
+        )
+        return classifier, model
+
+    classifier, needs_model = fit_models(validation_start)
+    window = [
+        i for i in issues_repo.list(repository) if validation_start <= i.created_at < test_start
+    ]
+    sample = stratified(window, args.per_class)
+    embedder = make_embedder(settings)
+    deps = build_agent_deps(settings, repository, routing="legacy")
+    llm = build_llm_client(settings)
+    deps.triager = EscalatingTriager(classifier, embedder.embed, Triager(llm))
+
+    def needs_probability(title: str, body: str) -> float:
+        return needs_model.probability(embedder.embed([issue_query(title, body)]))[0]
+
+    agent = TriageAgent(build_graph(deps, InMemorySaver()))
+    signals = collect_signals(
+        [issue for issue, _ in sample],
+        agent,
+        needs_probability,
+        missing_info,
+        on_progress=lambda n: print(f"{n}/{len(sample)} validation issues", file=sys.stderr),
+    )
+    expected = [action for _, action in sample]
+    legacy = action_report(expected, [route_action(s, LEGACY)[0] for s in signals])
+    best, rows = calibrate(signals, expected, policy_grid())
+
+    production_classifier, production_needs = fit_models(test_start)
+    models = settings.data_dir / "models"
+    models.mkdir(parents=True, exist_ok=True)
+    slug = repository.replace("/", "__")
+    (models / f"{slug}-routing.json").write_text(best.to_json(), encoding="utf-8")
+    joblib.dump(production_needs, models / f"{slug}-needs-info.joblib")
+    joblib.dump(production_classifier, models / f"{slug}-type.joblib")
+
+    summary = {
+        "task": "routing-calibration",
+        "repository": repository,
+        "validation_window": [validation_start.isoformat(), test_start.isoformat()],
+        "validation_counts": dict(Counter(expected)),
+        "objective": "macro-F1 over duplicate / needs_info / answer / summary",
+        "legacy_rules": legacy,
+        "chosen_policy": rows[0]["policy"],
+        "chosen": {k: v for k, v in rows[0].items() if k != "policy"},
+        "top_policies": rows[:10],
+        "grid_size": len(rows),
+    }
+    out = settings.evals_dir / "results" / "routing-calibration.json"
+    write_json(out, summary)
+    print(f"legacy rules macro-F1 {legacy['macro_f1']:.3f}; calibrated {rows[0]['macro_f1']:.3f}")
+    print(f"policy: {best}")
+    print(f"written to {out}")
+    return 0
+
+
 def cmd_eval_replay(args: argparse.Namespace, settings: Settings) -> int:
     """Replay a stratified test-split sample through the whole agent (in memory)."""
     repository = issue_repository(settings)
@@ -353,12 +455,14 @@ def cmd_eval_replay(args: argparse.Namespace, settings: Settings) -> int:
         candidates = sorted(set(pool) - set(chosen))
         chosen += rng.sample(candidates, min(quota, len(candidates)))
     issues = [i for n in sorted(chosen) if (i := repository.get(args.repository, n))]
-    agent = TriageAgent(build_graph(build_agent_deps(settings, args.repository), InMemorySaver()))
+    deps = build_agent_deps(settings, args.repository, routing=args.routing)
+    agent = TriageAgent(build_graph(deps, InMemorySaver()))
     summary = evaluate_replay(
         issues, agent, on_progress=lambda n: print(f"{n}/{len(issues)} replayed", file=sys.stderr)
     )
-    summary.update(repository=args.repository, split="test", sample_seed=7)
-    out = settings.evals_dir / "results" / "replay-test.json"
+    summary.update(repository=args.repository, split="test", sample_seed=7, routing=args.routing)
+    suffix = "" if args.routing == "calibrated" else f"-{args.routing}"
+    out = settings.evals_dir / "results" / f"replay-test{suffix}.json"
     write_json(out, summary)
     print(json.dumps({k: summary[k] for k in ("n", "actions", "action_agreement")}, indent=2))
     print(f"written to {out}")
@@ -673,9 +777,15 @@ def build_parser() -> argparse.ArgumentParser:
     eval_decision.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
     eval_decision.set_defaults(handler=cmd_eval_decision)
 
+    calibrate_routing = commands.add_parser("calibrate-routing", help="tune the agent's routing")
+    calibrate_routing.add_argument("repository", nargs="?", default="astral-sh/uv")
+    calibrate_routing.add_argument("--per-class", type=int, default=60)
+    calibrate_routing.set_defaults(handler=cmd_calibrate_routing)
+
     eval_replay = commands.add_parser("eval-replay", help="replay test issues end to end")
     eval_replay.add_argument("repository", help="owner/name, e.g. astral-sh/uv")
     eval_replay.add_argument("--per-group", type=int, default=25)
+    eval_replay.add_argument("--routing", choices=["calibrated", "legacy"], default="calibrated")
     eval_replay.set_defaults(handler=cmd_eval_replay)
 
     sandbox_poll = commands.add_parser("sandbox-poll", help="queue new sandbox issues")
