@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from langgraph.checkpoint.memory import InMemorySaver
@@ -71,7 +72,7 @@ def test_policy_round_trips_through_json() -> None:
     assert RoutingPolicy.from_json(policy.to_json()) == policy
 
 
-def test_needs_info_model_ranks_positives_higher() -> None:
+def test_needs_info_model_ranks_positives_higher_and_round_trips(tmp_path: Path) -> None:
     embedder = HashingEmbedder(dimension=64)
     vague = ["it does not work", "broken please fix", "error happens sometimes", "crash help"] * 10
     detailed = [
@@ -85,6 +86,12 @@ def test_needs_info_model_ranks_positives_higher() -> None:
     vague_p, detailed_p = model.probability(embedder.embed(["it is broken, help", detailed[0]]))
 
     assert vague_p > 0.5 > detailed_p
+
+    path = tmp_path / "needs-info.json"
+    path.write_text(model.to_json(), encoding="utf-8")
+    loaded = NeedsInfoModel.load(path)
+    assert loaded is not None
+    assert loaded.probability(embedder.embed(["it is broken, help"]))[0] == pytest.approx(vague_p)
 
 
 def test_calibration_picks_the_policy_that_matches_maintainers() -> None:

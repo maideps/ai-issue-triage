@@ -6,8 +6,6 @@ from contextlib import ExitStack
 from pathlib import Path
 from threading import Lock
 
-import joblib
-
 from issue_triage.config import Settings
 from issue_triage.domain.pseudonymize import Pseudonymizer
 from issue_triage.domain.publishing import SafePublisher
@@ -27,7 +25,7 @@ from issue_triage.infrastructure.llm.litellm_provider import LiteLLMProvider, Ro
 from issue_triage.services.agent.graph import AgentDeps, Classifier, build_graph
 from issue_triage.services.agent.runner import TriageAgent
 from issue_triage.services.answers import AnswerDrafter, DocRetriever
-from issue_triage.services.decision_model import EscalatingTriager
+from issue_triage.services.decision_model import EmbeddingClassifier, EscalatingTriager
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.duplicates import SimilarIssueFinder
 from issue_triage.services.kpis import KpiService
@@ -99,17 +97,16 @@ def build_agent_deps(
         llm, DocRetriever(embedder, PostgresChunkRepository(sessions), repository)
     )
     # The trained classifier handles confident cases when `eval-decision` has saved one (D-012).
-    type_model = model_path(settings, repository, "type.joblib")
+    type_model = EmbeddingClassifier.load(model_path(settings, repository, "type.json"))
     triager: Classifier = Triager(llm)
-    if type_model.exists():
-        triager = EscalatingTriager(joblib.load(type_model), embedder.embed, Triager(llm))
+    if type_model is not None:
+        triager = EscalatingTriager(type_model, embedder.embed, Triager(llm))
     policy = needs_info = None
     if routing == "calibrated":
         # Written by `calibrate-routing` (D-015); without them the legacy rules apply.
         policy = RoutingPolicy.load(model_path(settings, repository, "routing.json"))
-        needs_info_file = model_path(settings, repository, "needs-info.joblib")
-        if needs_info_file.exists():
-            model: NeedsInfoModel = joblib.load(needs_info_file)
+        model = NeedsInfoModel.load(model_path(settings, repository, "needs-info.json"))
+        if model is not None:
 
             def needs_info(title: str, body: str) -> float:
                 return model.probability(embedder.embed([issue_query(title, body)]))[0]

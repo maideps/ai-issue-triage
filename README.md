@@ -39,13 +39,13 @@ cd ai-issue-triage
 docker compose up --build
 ```
 
-Open **http://localhost:8080** once the `seed` container prints `demo ready`. The first build downloads CPU-only PyTorch and bakes the embedding model into the image (about 10 minutes, a 2.7 GB image); later starts take seconds. The seed loads a committed sample (400 pseudonymized and redacted uv issues plus the uv docs snapshot, [`samples/demo/`](samples/demo/)), embeds and indexes it, and queues 8 issues from the golden set. No API key, no spend. Then:
+Open **http://localhost:8080** once the `seed` container prints `demo ready`. The first build downloads CPU-only PyTorch and bakes the embedding model into the image (about 10 minutes, a 2.7 GB image); later starts take seconds. The seed loads a committed sample (400 pseudonymized and redacted uv issues plus the uv docs snapshot, [`samples/demo/`](samples/demo/)), embeds and indexes it, and queues 8 issues from the golden set. The image also carries the two trained classifiers and the calibrated routing policy behind the results below ([`samples/demo/models/`](samples/demo/models/), a few kilobytes of JSON coefficients). No API key, no spend. Then:
 
 1. Open a suggestion under **Pending**. The original issue sits beside the proposed response, with its evidence (why that action was chosen, the triage label, cited doc chunks) and similar earlier issues.
 2. **Approve**, edit and **Approve edited**, or **Reject**. The agent run resumes from its checkpoint and the decision is stored as feedback. Nothing is posted anywhere.
 3. Type an issue number **from the sample** into **Replay** to triage it as it was when opened, and compare with what maintainers did.
 
-**The demo is not the evaluated configuration.** The two trained classifiers and the calibrated routing need the full issue history, which is not committed, so the demo triages every issue with the keyword stand-in and uses the original hand-written routing rules. Expect weaker suggestions than the numbers below; [docs/PIPELINE.md](docs/PIPELINE.md) rebuilds the full setup.
+**Same models, smaller haystack.** The demo runs the evaluated models and routing policy, trained on uv issues opened before the test split; the queued issues all come from the test split, so the models never saw them. Duplicate search, however, only looks through the 400 sample issues instead of all 9,411, so it finds fewer originals than the evaluation did. [docs/PIPELINE.md](docs/PIPELINE.md) rebuilds the full setup.
 
 Change ports with `ISSUE_TRIAGE_WEB_PORT` (default 8080) and `ISSUE_TRIAGE_DB_PORT` (default 5433, also published); `docker compose down -v` removes the data.
 
@@ -112,6 +112,7 @@ flowchart LR
 | [D-012](DECISIONS.md#d-012-a-trained-classifier-triages-first-and-escalates-to-the-llm-below-05-confidence) | A trained classifier triages first and escalates when unsure |
 | [D-013](DECISIONS.md#d-013-replay-mode-compares-with-maintainers-the-decision-rules-need-calibration) | Replay against maintainers showed routing as the weak spot |
 | [D-015](DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds) | Calibrated routing: a needs-info classifier and thresholds tuned on the train split |
+| [D-016](DECISIONS.md#d-016-trained-models-are-saved-as-json-coefficients-and-ship-with-the-demo) | Trained models saved as JSON coefficients, not pickles, and shipped with the demo |
 
 All decisions, with context and alternatives: [DECISIONS.md](DECISIONS.md).
 
@@ -123,7 +124,7 @@ All decisions, with context and alternatives: [DECISIONS.md](DECISIONS.md).
 - **Local use only.** The API and UI have no authentication; anyone who can reach them can approve suggestions.
 - **Live mode** has not been run against a real GitHub repository, only with a recording publisher in tests (D-014).
 - **The golden sample's labels** are the maintainers'; they were checked against titles by an AI assistant, and a human review is still pending ([`evals/datasets/`](evals/datasets/README.md)).
-- **The Docker demo** runs without the trained classifiers and the calibrated routing (see above).
+- **The Docker demo** searches 400 sample issues for duplicates, not the full history (see above).
 
 ## Going further
 

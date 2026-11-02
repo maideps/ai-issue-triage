@@ -141,7 +141,7 @@ Mutation testing has no preset because each stack's tool reports differently. St
 
 A gate is any number with a floor, so the same mechanism fits an LLM eval score (`{ "name": "eval-accuracy", "cmd": "python -m evals.run", "metric": { "file": "evals/results/latest.json", "path": "accuracy" }, "min": 0.8 }`).
 
-Reports go to `.harness/quality/`, a folder that ignores itself. `npm run lint` fails on a malformed `.harness/quality.json` even while it is disabled. To make a metric part of a feature's evidence, add `{ "label": "Layer 4: Quality gates", "cmd": "npm run quality" }` to its layers. After `harness-upgrade`, an existing adopter gets the disabled file and the new `quality` script is listed for `package.json`; append `&& npm run quality` to your `check` script so `npm run check` matches `make check`.
+Reports go to `.harness/quality/`, a folder that ignores itself. `npm run lint` fails on a malformed `.harness/quality.json` even while it is disabled. To make a metric part of a feature's evidence, add `{ "label": "Layer 4: Quality gates", "cmd": "npm run quality" }` to its layers. After `harness-upgrade`, an existing adopter gets the disabled file, and the upgrade prints the `quality` npm script and make target to add: `Makefile` and `package.json` are adopter-owned, so add both, then append `quality` to the `check` target and `&& npm run quality` to the `check` script, and run `npm run harness-docs`. Until the make target exists, `npm run build` fails with `Makefile is missing target quality`.
 
 ## Dev Container (optional)
 
@@ -183,7 +183,7 @@ Three tools read the manifest as the single source of truth (make and npm mirror
 | Tool | Purpose |
 |---|---|
 | `create-harness <dir>` | Generates an adopter repo: CORE as-is, templates placed per their `{from, to}` mapping, runtime surfaces created. Never overwrites existing files. |
-| `harness-upgrade <dir>` | Applies an upgrade per the D-010 contract: overwrites mustNotEdit CORE only; every adopter-owned surface is never overwritten. |
+| `harness-upgrade <dir>` | Applies an upgrade per the D-010 contract: overwrites mustNotEdit CORE only, including the shipped skills named in the manifest's `shippedSkills`; every adopter-owned surface, project skills included, is never overwritten. |
 | `harness-audit [dir]` | Local health report: manifest validity, classification coverage, template placement status, skills structure. Exits non-zero on any failure. |
 
 ```bash
@@ -249,8 +249,8 @@ Adoption steps:
    | templates/sprint-contract.md | (keep — reference) |
    | templates/evaluator-rubric.md | (keep — reference) |
    | templates/clean-state-checklist.md | (keep — reference) |
-3. The generated CI workflow uses your `.nvmrc`, runs `npm run setup --if-present`, then `npm run check` and `npm run check-arch`. Edit `.nvmrc` to choose the Node version for your project. The workflow skips the framework's adoption matrix, which runs in this repository's CI; configure your own e2e script to run project-specific end-to-end tests.
-4. Add your product directories to `productRoots` in `.harness/manifest.json`.
+3. The generated CI workflow uses your `.nvmrc`, runs `npm run setup --if-present`, then `npm run check` and `npm run check-arch`. If the target already held a Python product (`pyproject.toml` or `requirements.txt`), it also sets up Python with `actions/setup-python` (from `.python-version`, else 3.12) so `npm run setup` can install your dependencies; add that step yourself if you add Python later. Edit `.nvmrc` to choose the Node version for your project. The workflow skips the framework's adoption matrix, which runs in this repository's CI; configure your own e2e script to run project-specific end-to-end tests.
+4. Add your product directories to `productRoots` in `.harness/manifest.json` (a new adopter starts with an empty list).
 5. Add project-specific architecture rules to `.harness/arch-rules.json` as your codebase grows.
 6. Run `./init.sh`, then `npm run check` — you are now on the harness.
 

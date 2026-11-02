@@ -551,6 +551,33 @@
           "repair": "Resolve cross-layer issues and rerun full verification."
         }
       ]
+    },
+    {
+      "id": "feat-022",
+      "name": "Demo ships the trained models",
+      "behavior": "The Docker demo runs the evaluated type classifier, needs-info classifier and calibrated routing policy, saved as JSON coefficients instead of pickles.",
+      "verification": "Tests cover the JSON round trip of both classifiers and that the committed demo models load and are copied to where the image looks; a fresh docker compose run shows classifier triage and calibrated routing.",
+      "dependencies": [
+        "feat-018",
+        "feat-021"
+      ],
+      "layers": [
+        {
+          "label": "Layer 1: Static checks",
+          "cmd": "npm run lint",
+          "repair": "Fix static-analysis issues and rerun the layer command."
+        },
+        {
+          "label": "Layer 2: Runtime tests",
+          "cmd": "npm run test",
+          "repair": "Fix failing tests and rerun the layer command."
+        },
+        {
+          "label": "Layer 3: System confirmation",
+          "cmd": "npm run check",
+          "repair": "Resolve cross-layer issues and rerun full verification."
+        }
+      ]
     }
   ]
 }

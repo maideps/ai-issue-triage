@@ -1,5 +1,6 @@
 import random
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -54,6 +55,24 @@ def test_classifier_learns_separable_classes() -> None:
     assert sorted(classifier.classes) == sorted(TYPE_CLASSES)
     assert macro(y_test, [label for label, _ in predictions]) > 0.8
     assert all(0.25 <= confidence <= 1.0 for _, confidence in predictions)
+
+
+def test_classifier_round_trips_through_json(tmp_path: Path) -> None:
+    x_train, y_train = synthetic(30, seed=1)
+    x_test, _ = synthetic(10, seed=2)
+    classifier = EmbeddingClassifier().fit(x_train, y_train)
+    path = tmp_path / "type.json"
+    path.write_text(classifier.to_json(), encoding="utf-8")
+
+    loaded = EmbeddingClassifier.load(path)
+
+    assert loaded is not None
+    assert loaded.classes == classifier.classes
+    for (label, p), (label2, p2) in zip(
+        classifier.predict(x_test), loaded.predict(x_test), strict=True
+    ):
+        assert label == label2 and p == pytest.approx(p2, abs=1e-6)
+    assert EmbeddingClassifier.load(tmp_path / "missing.json") is None
 
 
 def test_route_escalates_only_below_the_threshold() -> None:

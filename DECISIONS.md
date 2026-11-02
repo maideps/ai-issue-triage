@@ -221,3 +221,17 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: a measured gain on unseen issues, and the routing is now data-driven and re-tunable with `calibrate-routing`.
 - Negative: the remaining gap sits upstream: duplicate recall is limited by retrieval similarity and answer recall by triage recognising questions; summary recall dropped slightly as needs-info started firing.
+
+### D-016: Trained models are saved as JSON coefficients and ship with the demo
+
+**Date:** 2026-11-02
+**Status:** accepted
+**Context:** The Docker demo ran without the trained type classifier, the needs-info classifier and the calibrated routing: they lived only in the git-ignored `data/models/` as joblib pickles, so the demo fell back to the keyword stand-in and the legacy rules and did not show the configuration the README's numbers measure. Committing pickles is a poor fix: loading one executes code, they cannot be reviewed, and they break across scikit-learn versions (the image installs whatever `scikit-learn>=1.5` resolves to).
+**Decision:** Both classifiers are logistic regressions, so they are saved as their classes, coefficients and intercepts in JSON (`services/linear_model.py`) and rebuilt into a `LogisticRegression` on load. `eval-decision` and `calibrate-routing` write `-type.json` and `-needs-info.json`; the existing models were converted once (same labels on 200 random unit vectors, probabilities within 3e-7). The three files (about 40 KB) are committed under `samples/demo/models/` and the backend image copies them to `/app/data/models/`.
+**Alternatives considered:**
+- Commit the joblib files — Rejected: code execution on load, unreviewable, version-fragile.
+- Train the models inside the demo seed — Rejected: the 400-issue sample is too small and would not be the evaluated model.
+- skops or ONNX — Rejected: a new dependency for two linear models.
+**Consequences:**
+- Positive: the demo runs the evaluated models and policy; models are diffable and load without executing code.
+- Negative: the demo still searches only 400 issues for duplicates, so it finds fewer originals than the evaluation; a new calibration has to be copied to `samples/demo/models/` by hand.

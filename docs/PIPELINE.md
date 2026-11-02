@@ -109,7 +109,7 @@ node tools/py.mjs -m issue_triage eval-replay astral-sh/uv --routing legacy  # c
 node tools/py.mjs -m issue_triage eval-replay astral-sh/uv                   # calibrated (default when the files exist)
 ```
 
-Models are fit on the oldest 85% of the train split, the policy is chosen on the newest 15%, and the test replay is only run afterwards ([D-015](../DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds)).
+Models are fit on the oldest 85% of the train split, the policy is chosen on the newest 15%, and the test replay is only run afterwards ([D-015](../DECISIONS.md#d-015-calibrated-routing-a-needs-info-classifier-and-tuned-thresholds)). The three files in `data/models/` are JSON; copy them to `samples/demo/models/` to ship a new calibration with the Docker demo ([D-016](../DECISIONS.md#d-016-trained-models-are-saved-as-json-coefficients-and-ship-with-the-demo)).
 
 ## Use the search tools from any agent (MCP)
 

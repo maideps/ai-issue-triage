@@ -1,0 +1,11 @@
+{
+  "duplicate_threshold": 0.8,
+  "needs_info_threshold": 0.7,
+  "needs_info_labels": [
+    "bug",
+    "question",
+    "enhancement",
+    "other"
+  ],
+  "needs_info_first": true
+}

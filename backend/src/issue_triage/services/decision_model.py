@@ -7,11 +7,12 @@ token cost; only low-confidence issues go to the LLM step (the ebook's decision 
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal, Protocol
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
 
+from issue_triage.services import linear_model
 from issue_triage.services.docs_index import issue_query
 from issue_triage.services.guardrails import guard_input
 from issue_triage.services.triage import TriageDecision
@@ -21,7 +22,7 @@ Source = Literal["classifier", "llm"]
 
 class EmbeddingClassifier:
     def __init__(self, c: float = 1.0) -> None:
-        self._model = LogisticRegression(C=c, max_iter=2000, class_weight="balanced")
+        self._model = linear_model.new_model(c)
 
     def fit(
         self, vectors: Sequence[Sequence[float]], labels: Sequence[str]
@@ -38,6 +39,19 @@ class EmbeddingClassifier:
         probabilities = self._model.predict_proba(np.asarray(vectors, dtype=np.float32))
         classes = self.classes
         return [(classes[int(row.argmax())], float(row.max())) for row in probabilities]
+
+    def to_json(self) -> str:
+        return linear_model.to_json(self._model)
+
+    @classmethod
+    def from_json(cls, text: str) -> "EmbeddingClassifier":
+        model = cls()
+        model._model = linear_model.from_json(text)
+        return model
+
+    @classmethod
+    def load(cls, path: Path) -> "EmbeddingClassifier | None":
+        return cls.from_json(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 @dataclass(frozen=True)

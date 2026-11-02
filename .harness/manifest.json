@@ -248,5 +248,17 @@
       "the PASS/SKIP/FAIL semantics of verification layers",
       "the feature state machine and WIP=1 contract"
     ]
-  }
+  },
+  "shippedSkills": [
+    "adopt",
+    "commit",
+    "feature-cycle",
+    "parallel-lanes",
+    "release",
+    "review",
+    "session-handoff",
+    "update-docs",
+    "verification",
+    "write-skill"
+  ]
 }

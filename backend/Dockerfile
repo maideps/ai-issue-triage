@@ -20,6 +20,8 @@ RUN pip install .
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
 COPY samples /app/samples
+# Trained classifiers and routing policy (plain JSON, D-016), where build_agent_deps looks.
+COPY samples/demo/models /app/data/models
 COPY evals /app/evals
 
 ENV HF_HUB_OFFLINE=1 \

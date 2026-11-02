@@ -13,7 +13,6 @@ from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 
-import joblib
 from langgraph.checkpoint.memory import InMemorySaver
 
 from issue_triage.api.mcp_server import create_mcp_server
@@ -320,11 +319,13 @@ def cmd_eval_decision(args: argparse.Namespace, settings: Settings) -> int:
     }
     out = settings.evals_dir / "results" / "decision-model-test.json"
     write_json(out, summary)
-    model_path = settings.data_dir / "models" / f"{args.repository.replace('/', '__')}-type.joblib"
+    model_path = settings.data_dir / "models" / f"{args.repository.replace('/', '__')}-type.json"
     model_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(
-        EmbeddingClassifier().fit([vectors[c.number] for c in train], [c.label for c in train]),
-        model_path,
+    model_path.write_text(
+        EmbeddingClassifier()
+        .fit([vectors[c.number] for c in train], [c.label for c in train])
+        .to_json(),
+        encoding="utf-8",
     )
     for name in ("test_classifier_only", "test_llm_only", "test_escalating"):
         row = summary[name]
@@ -398,8 +399,8 @@ def cmd_calibrate_routing(args: argparse.Namespace, settings: Settings) -> int:
     models.mkdir(parents=True, exist_ok=True)
     slug = repository.replace("/", "__")
     (models / f"{slug}-routing.json").write_text(best.to_json(), encoding="utf-8")
-    joblib.dump(production_needs, models / f"{slug}-needs-info.joblib")
-    joblib.dump(production_classifier, models / f"{slug}-type.joblib")
+    (models / f"{slug}-needs-info.json").write_text(production_needs.to_json(), encoding="utf-8")
+    (models / f"{slug}-type.json").write_text(production_classifier.to_json(), encoding="utf-8")
 
     summary = {
         "task": "routing-calibration",

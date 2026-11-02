@@ -55,6 +55,39 @@ test("adopt: an already-customized package.json is never rewritten", () => {
   }
 });
 
+// feat-027: the framework's own productRoots (publish.yml, repo-completion-plan.md) used to
+// land in every new adopter's manifest, exempting files the adopter does not have.
+test("adopt: a brand-new target starts with empty productRoots and the framework's classification", () => {
+  const root = fixture("manifest");
+  try {
+    adopt(root, { skipExisting: true });
+    const manifest = JSON.parse(readFileSync(path.join(root, ".harness", "manifest.json"), "utf8"));
+    const frameworkManifest = JSON.parse(readFileSync(path.join(HARNESS_ROOT, ".harness", "manifest.json"), "utf8"));
+
+    assert.deepEqual(manifest.productRoots, []);
+    assert.deepEqual({ ...manifest, productRoots: frameworkManifest.productRoots }, frameworkManifest);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("adopt: an existing adopter manifest keeps its productRoots", () => {
+  const root = fixture("existing-manifest");
+  try {
+    adopt(root, { skipExisting: true });
+    const manifestPath = path.join(root, ".harness", "manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.productRoots = ["src/"];
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+    adopt(root, { skipExisting: true });
+
+    assert.deepEqual(JSON.parse(readFileSync(manifestPath, "utf8")).productRoots, ["src/"]);
+  } finally {
+    cleanup(root);
+  }
+});
+
 test("adopt: the sanitized name is derived from the target directory name", () => {
   const parent = fixture("naming");
   const root = path.join(parent, "My Cool Project!!");
@@ -227,5 +260,57 @@ test("register-mcp.sh registers every command server in .mcp.json with codex", {
     assert.equal(readFileSync(log, "utf8"), "mcp add context7 -- npx -y @upstash/context7-mcp\n");
   } finally {
     cleanup(root);
+  }
+});
+
+// feat-028: a python adopter's CI failed in `npm run setup` because the workflow only set up
+// Node and the runner's system Python refuses `pip install` (PEP 668).
+function ciWorkflowOf(root) {
+  return readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
+}
+
+test("adopt: a python product's CI workflow sets up Python before the setup step", () => {
+  const root = fixture("ci-python");
+  try {
+    writeFileSync(path.join(root, "pyproject.toml"), "", "utf8");
+    adopt(root, { skipExisting: true });
+    const workflow = ciWorkflowOf(root);
+    assert.match(workflow, /- uses: actions\/setup-python@v5\n\s+with:\n\s+python-version: "3\.12"\n/);
+    assert.ok(workflow.indexOf("setup-node") < workflow.indexOf("setup-python"));
+    assert.ok(workflow.indexOf("setup-python") < workflow.indexOf("npm run setup --if-present"));
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("adopt: the CI workflow takes the Python version from .python-version when present", () => {
+  const root = fixture("ci-python-version");
+  try {
+    writeFileSync(path.join(root, "requirements.txt"), "", "utf8");
+    writeFileSync(path.join(root, ".python-version"), "3.11\n", "utf8");
+    adopt(root, { skipExisting: true });
+    assert.match(ciWorkflowOf(root), /python-version-file: \.python-version\n/);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("adopt: other stacks and an existing CI workflow get no setup-python step", () => {
+  const goRoot = fixture("ci-go");
+  const existingRoot = fixture("ci-existing");
+  try {
+    writeFileSync(path.join(goRoot, "go.mod"), "", "utf8");
+    adopt(goRoot, { skipExisting: true });
+    assert.equal(ciWorkflowOf(goRoot), readFileSync(path.join(HARNESS_ROOT, "templates", "ci.yml"), "utf8"));
+
+    const own = "name: mine\n";
+    mkdirSync(path.join(existingRoot, ".github", "workflows"), { recursive: true });
+    writeFileSync(path.join(existingRoot, ".github", "workflows", "ci.yml"), own, "utf8");
+    writeFileSync(path.join(existingRoot, "pyproject.toml"), "", "utf8");
+    adopt(existingRoot, { skipExisting: true });
+    assert.equal(ciWorkflowOf(existingRoot), own);
+  } finally {
+    cleanup(goRoot);
+    cleanup(existingRoot);
   }
 });

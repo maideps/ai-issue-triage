@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
 
 from issue_triage.domain.metrics import classification_report
+from issue_triage.services import linear_model
 from issue_triage.services.agent.state import ACTIONS, Action
 
 NEVER = 1.01  # a threshold no similarity or probability reaches: the branch is off
@@ -92,7 +92,7 @@ class NeedsInfoModel:
     """P(maintainers ask for a reproducible example), from the issue embedding."""
 
     def __init__(self, c: float = 1.0) -> None:
-        self._model = LogisticRegression(C=c, max_iter=2000, class_weight="balanced")
+        self._model = linear_model.new_model(c)
 
     def fit(
         self, vectors: Sequence[Sequence[float]], needs_info: Sequence[bool]
@@ -104,6 +104,19 @@ class NeedsInfoModel:
         probabilities = self._model.predict_proba(np.asarray(vectors, dtype=np.float32))
         positive = list(self._model.classes_).index(True)
         return [float(row[positive]) for row in probabilities]
+
+    def to_json(self) -> str:
+        return linear_model.to_json(self._model)
+
+    @classmethod
+    def from_json(cls, text: str) -> "NeedsInfoModel":
+        model = cls()
+        model._model = linear_model.from_json(text)
+        return model
+
+    @classmethod
+    def load(cls, path: Path) -> "NeedsInfoModel | None":
+        return cls.from_json(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def action_report(expected: Sequence[str], predicted: Sequence[str]) -> dict[str, Any]:
