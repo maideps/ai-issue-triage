@@ -154,9 +154,9 @@ npm run check-arch              # architecture rules
 | 2 | `make test` / `npm run test` | pytest (219 tests, database included), Vitest (10 tests) |
 | 3 | `make build` / `npm run build` | Python compile check, Vite build |
 | 3b | `make e2e` / `npm run e2e` | The harness's own end-to-end matrix |
-| — | `make quality` / `npm run quality` | Metric gates; currently disabled, reports SKIP |
+| 4 | `make quality` / `npm run quality` | Backend line coverage at least 80% (87% now), measured on the full pytest suite |
 
-Layers that are not configured report **SKIP** and do not count as verified. Database tests skip when PostgreSQL is down unless `ISSUE_TRIAGE_REQUIRE_DB=1` (CI and the feature gates set it). CI also runs a golden-set evaluation gate that fails if triage drops more than 0.02 macro-F1 below the committed baseline. The complete command list: [Harness Command Reference](docs/HARNESS.md) (regenerate with `npm run harness-docs`).
+Layers that are not configured report **SKIP** and do not count as verified. Database tests skip when PostgreSQL is down unless `ISSUE_TRIAGE_REQUIRE_DB=1` (CI and the feature gates set it); the coverage gate needs PostgreSQL up, since skipped database tests pull coverage below the floor ([D-017](DECISIONS.md#d-017-a-backend-coverage-gate-at-80)). CI also runs a golden-set evaluation gate that fails if triage drops more than 0.02 macro-F1 below the committed baseline. The complete command list: [Harness Command Reference](docs/HARNESS.md) (regenerate with `npm run harness-docs`).
 
 State files: `feature_list.json` (feature declarations), `.harness/state/<id>.json` (evidence per feature), `PROGRESS.md` and `progress/` (session notes), `DECISIONS.md`, `session-handoff.md`. Other docs: [Learning Log](docs/learning-log/README.md), [Observability](docs/OBSERVABILITY.md), [Tools & MCP](docs/TOOLS.md), [Usage Guide](docs/USAGE.md), [Quality Document](docs/quality-document.md).
 

@@ -235,3 +235,17 @@ This file records significant architectural decisions, their context, alternativ
 **Consequences:**
 - Positive: the demo runs the evaluated models and policy; models are diffable and load without executing code.
 - Negative: the demo still searches only 400 issues for duplicates, so it finds fewer originals than the evaluation; a new calibration has to be copied to `samples/demo/models/` by hand.
+
+### D-017: A backend coverage gate at 80%
+
+**Date:** 2026-11-03
+**Status:** accepted
+**Context:** The harness ships metric gates in `.harness/quality.json`, run last in `npm run check` (and so in CI), but they were disabled: the layer reported SKIP and measured nothing. The suite had grown to 219 backend tests, enough to hold a floor.
+**Decision:** Enable a `coverage` gate with a floor of 80% line coverage of `issue_triage`, measured by `pytest-cov` (added to the backend dev dependencies with the user's approval; it was outside the D-002 stack). The harness's Python preset looks for Python at the repository root, so the gate declares its own command (`node tools/py.mjs -m pytest --cov=issue_triage`, run in `backend/`) and reads `totals.percent_covered` from the JSON report. Measured at enablement: 86.89%. The mutation gate stays disabled.
+**Alternatives considered:**
+- Floor at the measured 87% — Rejected for now: no headroom for honest refactors; raise it once `cli.py` (42%) and `wiring.py` (54%) are covered.
+- Frontend coverage too — Deferred: it needs `@vitest/coverage-v8`, another dependency, for 10 component tests.
+- Mutation testing (mutmut) — Deferred: it needs Linux, macOS or WSL and a long run.
+**Consequences:**
+- Positive: CI fails when coverage drops below 80%; `npm run check` no longer ends in a SKIP.
+- Negative: the suite runs twice in `npm run check` (tests, then coverage, about 25 s each); locally the gate needs PostgreSQL up, since skipped database tests lower coverage.

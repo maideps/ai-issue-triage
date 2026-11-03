@@ -1,8 +1,13 @@
 {
-  "$comment": "Opt-in metric gates run by make quality / npm run quality (and last in make check). See the Quality Gates section of docs/USAGE.md.",
-  "enabled": false,
+  "$comment": "Opt-in metric gates run by make quality / npm run quality (and last in make check). See the Quality Gates section of docs/USAGE.md. Coverage runs the backend suite in backend/ (the root preset would look for Python at the repository root); it needs PostgreSQL up, or the database tests skip and coverage drops (D-017).",
+  "enabled": true,
   "gates": [
-    { "name": "coverage", "min": 80 },
+    {
+      "name": "coverage",
+      "cmd": "node tools/py.mjs -m pytest -q --cov=issue_triage --cov-report=term --cov-report=json:../.harness/quality/coverage.json",
+      "metric": { "file": ".harness/quality/coverage.json", "path": "totals.percent_covered" },
+      "min": 80
+    },
     { "name": "mutation", "enabled": false, "min": 80 }
   ]
 }
