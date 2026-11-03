@@ -149,7 +149,7 @@ npm run check-arch              # architecture rules
 |-------|---------|----------------|
 | 1 | `make lint` / `npm run lint` | Harness lint, ruff |
 | 1b | `make typecheck` / `npm run typecheck` | mypy --strict, tsc |
-| 2 | `make test` / `npm run test` | pytest (217 tests, database included), Vitest (10 tests) |
+| 2 | `make test` / `npm run test` | pytest (219 tests, database included), Vitest (10 tests) |
 | 3 | `make build` / `npm run build` | Python compile check, Vite build |
 | 3b | `make e2e` / `npm run e2e` | The harness's own end-to-end matrix |
 | — | `make quality` / `npm run quality` | Metric gates; currently disabled, reports SKIP |
