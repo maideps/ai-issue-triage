@@ -1,3 +1,10 @@
 * text=auto eol=lf
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# Harness tooling from ai-harness-framework: not part of the product, so not in GitHub's language stats
+scripts/** linguist-detectable=false
+tools/** linguist-detectable=false
+templates/** linguist-detectable=false
+skills/** linguist-detectable=false
+tests/*.mjs linguist-detectable=false

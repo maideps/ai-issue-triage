@@ -1,5 +1,7 @@
 # AI Issue Triage
 
+[![ci](https://github.com/maideps/ai-issue-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/maideps/ai-issue-triage/actions/workflows/ci.yml)
+
 **For each new issue, the system proposes a type label, finds earlier issues that may be duplicates, and prepares a draft response for a maintainer to approve, edit or reject.** It combines hybrid retrieval (pgvector + BM25), a LangGraph agent that always stops for human review, and two small trained classifiers. Every component is evaluated against what the maintainers of [astral-sh/uv](https://github.com/astral-sh/uv) actually did with 9,411 real issues, opened between October 2023 and October 2026.
 
 ![The review screen: issue #16021 beside a draft reply that quotes the uv docs, with KPIs above the queue](docs/images/review.png)
@@ -157,6 +159,10 @@ npm run check-arch              # architecture rules
 Layers that are not configured report **SKIP** and do not count as verified. Database tests skip when PostgreSQL is down unless `ISSUE_TRIAGE_REQUIRE_DB=1` (CI and the feature gates set it). CI also runs a golden-set evaluation gate that fails if triage drops more than 0.02 macro-F1 below the committed baseline. The complete command list: [Harness Command Reference](docs/HARNESS.md) (regenerate with `npm run harness-docs`).
 
 State files: `feature_list.json` (feature declarations), `.harness/state/<id>.json` (evidence per feature), `PROGRESS.md` and `progress/` (session notes), `DECISIONS.md`, `session-handoff.md`. Other docs: [Learning Log](docs/learning-log/README.md), [Observability](docs/OBSERVABILITY.md), [Tools & MCP](docs/TOOLS.md), [Usage Guide](docs/USAGE.md), [Quality Document](docs/quality-document.md).
+
+## Repository layout
+
+The product is in `backend/` (the API, agent, retrieval and classifiers, with their pytest suite), `frontend/` (the review UI), `evals/` (evaluation sets and results) and `samples/` (the demo data). The rest of the root is the process record from [ai-harness-framework](https://github.com/maideps/ai-harness-framework), the workflow this project is built with. `AGENTS.md` is the workflow every agent follows, and `CLAUDE.md`, `GEMINI.md` and `codex.md` point each agent to it. `scripts/`, `tools/`, `templates/`, `skills/` and the `.mjs` tests in `tests/` are the harness itself. `feature_list.json`, `PROGRESS.md`, `progress/`, `session-handoff.md` and `DECISIONS.md` record what was built, in what order and why.
 
 ## License
 
