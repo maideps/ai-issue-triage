@@ -4,7 +4,7 @@
 
 **For each new issue, the system proposes a type label, finds earlier issues that may be duplicates, and prepares a draft response for a maintainer to approve, edit or reject.** It combines hybrid retrieval (pgvector + BM25), a LangGraph agent that always stops for human review, and two small trained classifiers. Every component is evaluated against what the maintainers of [astral-sh/uv](https://github.com/astral-sh/uv) actually did with 9,411 real issues, opened between October 2023 and October 2026.
 
-![The review screen: issue #16021 beside a draft reply that quotes the uv docs, with KPIs above the queue](docs/images/review.png)
+![The review screen in the Docker demo: issue #16180 beside a draft reply that quotes the uv cache docs, with KPIs above the queue](docs/images/review.png)
 
 > **Portfolio project, read this first.**
 > - **No real language model has been used.** Every step that would call an LLM runs on a deterministic stand-in, because no API key was configured ([D-007](DECISIONS.md#d-007-build-on-a-fake-llm-and-local-models-run-gates-without-the-frameworks-adoption-matrix)). The numbers below are a **zero-spend baseline**; plugging in a real model is a settings change, but it has not been done.
@@ -71,7 +71,7 @@ How to read this:
 
 More detail and the full tables: [`evals/results/`](evals/results/README.md).
 
-![Replay of #17846: the agent proposed duplicate #17791; maintainers linked #17711. Badges show the action matches and the target differs](docs/images/replay.png)
+![Replay of #16376 in the Docker demo: the agent proposed duplicate #7242, the issue maintainers linked; badges show action, target and type all match. Most replayed duplicates are missed, see the results above](docs/images/replay.png)
 
 ## How it works
 
